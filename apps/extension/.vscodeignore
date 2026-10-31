@@ -1,0 +1,6 @@
+.turbo/**
+**/*.map
+esbuild.mjs
+src/**
+tsconfig.json
+test/**

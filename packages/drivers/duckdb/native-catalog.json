@@ -1,0 +1,186 @@
+[
+  {
+    "platform": "linux-x64",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-linux-x64/-/node-bindings-linux-x64-1.5.6-r.2.tgz",
+    "integrity": "sha512-Vrr5W9xrQB6Xnv4mgFuyzbvjKBrjMCQdAQiIWzcDOuKW+HpJKhjSUuNnOXplFmryy2eTsP/t7fodiqrgDPJYRA==",
+    "bytes": 23926920,
+    "files": [
+      {
+        "name": "duckdb.node",
+        "bytes": 489400,
+        "sha256": "bc21ed2f0b247d631c8c5fdfb235313a392313a9e438cd19ecb03b778d94a22a"
+      },
+      {
+        "name": "libduckdb.so",
+        "bytes": 70546800,
+        "sha256": "3f4962cdd266eab2b479a5b5a4a6d063d279b2954ae814ed00385d553b747633"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1072,
+        "sha256": "7e17fd31249fa875cb3b1c5e05c6c3e99b75509f6a2804ca176c217834de1dcb"
+      }
+    ]
+  },
+  {
+    "platform": "linux-arm64",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-linux-arm64/-/node-bindings-linux-arm64-1.5.6-r.2.tgz",
+    "integrity": "sha512-x/JvEl57X19PBlemOAQuyv0gf3QuP+GrnDZKLnCc6rDY/u8tlPYlzPoKHxWgcSu4FKXMSY0RXosgEm9ulMkOhA==",
+    "bytes": 21668965,
+    "files": [
+      {
+        "name": "duckdb.node",
+        "bytes": 565624,
+        "sha256": "2ea234b1628c8219bee7e7ab855891cbe78bda7dff2b8bd8dc6bf015c768fc7f"
+      },
+      {
+        "name": "libduckdb.so",
+        "bytes": 62945312,
+        "sha256": "23686593dba4ec22c6e581bb1c843b3964e84c4bc4d0063d8b4daddd2e20e30a"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1072,
+        "sha256": "7e17fd31249fa875cb3b1c5e05c6c3e99b75509f6a2804ca176c217834de1dcb"
+      }
+    ]
+  },
+  {
+    "platform": "linux-x64-musl",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-linux-x64-musl/-/node-bindings-linux-x64-musl-1.5.6-r.2.tgz",
+    "integrity": "sha512-GyLPoJcDRvi7vJMRnBNmI5kT95aaTVwgaFKBvpROen317oxckaA+OsBJovH+vtJlU7D+i+9mwmGN8wuDQAdJtg==",
+    "bytes": 24710926,
+    "files": [
+      {
+        "name": "duckdb.node",
+        "bytes": 525712,
+        "sha256": "f27e26ae871e730315c9d6685116d26c59beddb9edf2534d7c3f42bf358415c9"
+      },
+      {
+        "name": "libduckdb.so",
+        "bytes": 73252072,
+        "sha256": "b08c938d495995864a84ab0c5d38e1e8e6dddcc9fddbbc26c85fc09ad48ececb"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1072,
+        "sha256": "7e17fd31249fa875cb3b1c5e05c6c3e99b75509f6a2804ca176c217834de1dcb"
+      }
+    ]
+  },
+  {
+    "platform": "linux-arm64-musl",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-linux-arm64-musl/-/node-bindings-linux-arm64-musl-1.5.6-r.2.tgz",
+    "integrity": "sha512-scmH9rLsHc2npzWmJwEmhfPMlG/H3U+sHTqBEPs/eUQfD2OYf5uqo5M87BDOiStBaZICCDEpTnMOxoe4mgh2lw==",
+    "bytes": 22813227,
+    "files": [
+      {
+        "name": "duckdb.node",
+        "bytes": 561648,
+        "sha256": "7f8c88327d3510b82633b26df11ffff21ed353bfde58895e1c625eec5fb940fa"
+      },
+      {
+        "name": "libduckdb.so",
+        "bytes": 66784768,
+        "sha256": "2b322fee1f171915e5f19182277f63b9a2f1b409bb731cb93491de6a149b2417"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1072,
+        "sha256": "7e17fd31249fa875cb3b1c5e05c6c3e99b75509f6a2804ca176c217834de1dcb"
+      }
+    ]
+  },
+  {
+    "platform": "darwin-x64",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-darwin-x64/-/node-bindings-darwin-x64-1.5.6-r.2.tgz",
+    "integrity": "sha512-kx3tVfqytffRXgJ4AN7wB4dBaSS2WrmA0iy3dfIa7tbDYI8bFf+muZp6jtbsWAxhx+BzHV+wRmtMC/Ygmh/FTw==",
+    "bytes": 36820328,
+    "files": [
+      {
+        "name": "libduckdb.dylib",
+        "bytes": 117008720,
+        "sha256": "75a519cb914ae36ca22cff0995a8a2e8c9a46990b8c0a479514f741a0d93f344"
+      },
+      {
+        "name": "duckdb.node",
+        "bytes": 470720,
+        "sha256": "443ebbf64757c31abe1e3fe43ddd623f9869d03f50a45c957135c1ab7c0ddb75"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1072,
+        "sha256": "7e17fd31249fa875cb3b1c5e05c6c3e99b75509f6a2804ca176c217834de1dcb"
+      }
+    ]
+  },
+  {
+    "platform": "darwin-arm64",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-darwin-arm64/-/node-bindings-darwin-arm64-1.5.6-r.2.tgz",
+    "integrity": "sha512-JGNh1WQtlXrxDs6/5dmSH0tGBrn4Kl/GTlzay/KlIb0rJLray5c5PdZOl6o+ApOsAbgoQ2tRWuFFtoqwsfPqrQ==",
+    "bytes": 36819294,
+    "files": [
+      {
+        "name": "libduckdb.dylib",
+        "bytes": 117008720,
+        "sha256": "75a519cb914ae36ca22cff0995a8a2e8c9a46990b8c0a479514f741a0d93f344"
+      },
+      {
+        "name": "duckdb.node",
+        "bytes": 535224,
+        "sha256": "fac0213d3c1b58cab01a336f7594bc975d6d76a9013d1d4586815a50bc4960f5"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1072,
+        "sha256": "7e17fd31249fa875cb3b1c5e05c6c3e99b75509f6a2804ca176c217834de1dcb"
+      }
+    ]
+  },
+  {
+    "platform": "win32-x64",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-win32-x64/-/node-bindings-win32-x64-1.5.6-r.2.tgz",
+    "integrity": "sha512-iFPP94+k8ODB0k0FnELFO5vFB3IkI203RiaPa/9gfymE3AaugLFiN/2oOLhKqvowXWzRLuDBF4dJXRAWJDJ0KA==",
+    "bytes": 13627085,
+    "files": [
+      {
+        "name": "duckdb.dll",
+        "bytes": 36697896,
+        "sha256": "7e90bdef028d57b45490d6f53530e3c012a5d9abdc4c6723449200663dc84ed0"
+      },
+      {
+        "name": "duckdb.node",
+        "bytes": 1559552,
+        "sha256": "57d9c2e17f3d5b1c17f68dce724404ada61e8a73e56f2faf9164ff62a091c948"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1079,
+        "sha256": "4000856a8f007e53fc53150533d644bcaefc64b7461e43c14ccb9d3d66a59cd2"
+      }
+    ]
+  },
+  {
+    "platform": "win32-arm64",
+    "url": "https://registry.npmjs.org/@duckdb/node-bindings-win32-arm64/-/node-bindings-win32-arm64-1.5.6-r.2.tgz",
+    "integrity": "sha512-cHb9onfkRv8UG4iWMguu/5//aiJjzUyVncPEL3qkwmHgWtkgDP2psy8TExwoMvtnA+gTAQlIOebpanQ9ZYyzWw==",
+    "bytes": 14519303,
+    "files": [
+      {
+        "name": "duckdb.dll",
+        "bytes": 42844968,
+        "sha256": "f4652f29d0bec2ebc8f87d6242551051b93faa89ec6e427669e4e690f269bc1e"
+      },
+      {
+        "name": "duckdb.node",
+        "bytes": 1781760,
+        "sha256": "714f8565866ced29ee5a67c3265d2e18bfb5569a8a68e984e958e88ca3c3bbb9"
+      },
+      {
+        "name": "LICENSE",
+        "bytes": 1079,
+        "sha256": "4000856a8f007e53fc53150533d644bcaefc64b7461e43c14ccb9d3d66a59cd2"
+      }
+    ]
+  }
+]

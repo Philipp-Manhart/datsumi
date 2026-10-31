@@ -1,0 +1,7 @@
+{
+  "collection": "events",
+  "filter": {
+    "context.device.browser": "Firefox",
+    "context.device.mobile": true
+  }
+}

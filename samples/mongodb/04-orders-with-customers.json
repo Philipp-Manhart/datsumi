@@ -1,0 +1,33 @@
+{
+  "collection": "orders",
+  "pipeline": [
+    {
+      "$match": {
+        "status": "paid"
+      }
+    },
+    {
+      "$limit": 20
+    },
+    {
+      "$lookup": {
+        "from": "customers",
+        "localField": "customer_id",
+        "foreignField": "_id",
+        "as": "customer"
+      }
+    },
+    {
+      "$unwind": "$customer"
+    },
+    {
+      "$project": {
+        "total": 1,
+        "status": 1,
+        "ordered_at": 1,
+        "customer.name": 1,
+        "customer.email": 1
+      }
+    }
+  ]
+}

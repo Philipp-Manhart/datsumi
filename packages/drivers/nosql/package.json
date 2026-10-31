@@ -1,0 +1,20 @@
+{
+  "name": "@datsumi/driver-nosql",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./configuration": "./src/configuration.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@datsumi/core": "workspace:*",
+    "@datsumi/driver-api": "workspace:*",
+    "@datsumi/driver-sql": "workspace:*",
+    "mongodb": "7.7.0",
+    "redis": "6.3.0"
+  }
+}

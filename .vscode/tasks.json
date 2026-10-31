@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev",
+      "type": "shell",
+      "command": "bun dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "build:extension",
+      "type": "shell",
+      "command": "bun run build",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/extension"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "run:extension",
+      "type": "process",
+      "command": "${execPath}",
+      "args": [
+        "--new-window",
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/apps/extension",
+        "${workspaceFolder}"
+      ],
+      "dependsOn": "build:extension",
+      "problemMatcher": []
+    }
+  ]
+}

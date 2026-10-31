@@ -1,0 +1,21 @@
+{
+  "collection": "orders",
+  "pipeline": [
+    {
+      "$group": {
+        "_id": "$status",
+        "orders": {
+          "$sum": 1
+        },
+        "revenue": {
+          "$sum": "$total"
+        }
+      }
+    },
+    {
+      "$sort": {
+        "revenue": -1
+      }
+    }
+  ]
+}

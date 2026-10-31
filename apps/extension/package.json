@@ -1,0 +1,640 @@
+{
+  "name": "datsumi",
+  "displayName": "Datsumi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native SQL, DuckDB, MongoDB and Redis client with reviewed edits, JSON inspection and query history.",
+  "categories": [
+    "Other"
+  ],
+  "homepage": "https://github.com/Philipp-Manhart/datsumi#readme",
+  "bugs": {
+    "url": "https://github.com/Philipp-Manhart/datsumi/issues"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Philipp-Manhart/datsumi.git",
+    "directory": "apps/extension"
+  },
+  "publisher": "philipp-manhart",
+  "main": "./dist/extension.cjs",
+  "scripts": {
+    "build": "bun esbuild.mjs",
+    "clean": "rm -rf dist",
+    "dev": "bun esbuild.mjs --watch",
+    "package": "vsce package --no-dependencies",
+    "test:integration": "bun run build && node test/run.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "vscode:prepublish": "bun run build"
+  },
+  "dependencies": {
+    "@datsumi/core": "workspace:*",
+    "@datsumi/driver-api": "workspace:*",
+    "@datsumi/driver-duckdb": "workspace:*",
+    "@datsumi/driver-nosql": "workspace:*",
+    "@datsumi/driver-sql": "workspace:*",
+    "@datsumi/driver-sqlite": "workspace:*",
+    "@datsumi/protocol": "workspace:*",
+    "csv-parse": "^7.0.3",
+    "detect-libc": "2.1.2",
+    "sql-formatter": "^15.9.0",
+    "ssh2": "1.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/ssh2": "1.15.6",
+    "@types/vscode": "^1.138.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "vite": "^8.3.5"
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "datsumi",
+          "title": "Datsumi",
+          "icon": "./resources/database.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "datsumi-resultsPanel",
+          "title": "Query Results",
+          "icon": "./resources/database.svg"
+        }
+      ]
+    },
+    "views": {
+      "datsumi": [
+        {
+          "id": "datsumi.connections",
+          "name": "Datsumi Connections",
+          "icon": "./resources/database.svg"
+        },
+        {
+          "id": "datsumi.history",
+          "name": "Query History",
+          "visibility": "collapsed",
+          "icon": "./resources/database.svg"
+        }
+      ],
+      "datsumi-resultsPanel": [
+        {
+          "type": "webview",
+          "id": "datsumi.queryResults",
+          "name": "Query Results",
+          "icon": "./resources/database.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "datsumi.openSqlite",
+        "title": "Open SQLite Database",
+        "category": "Datsumi",
+        "icon": "$(add)"
+      },
+      {
+        "command": "datsumi.refreshConnections",
+        "title": "Refresh Connections",
+        "category": "Datsumi",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "datsumi.newQuery",
+        "title": "New Query",
+        "category": "Datsumi",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "datsumi.runQuery",
+        "title": "Run Query",
+        "category": "Datsumi",
+        "icon": "$(play)"
+      },
+      {
+        "command": "datsumi.selectConnection",
+        "title": "Use Connection",
+        "category": "Datsumi",
+        "icon": "$(database)"
+      },
+      {
+        "command": "datsumi.openTable",
+        "title": "Open Table",
+        "category": "Datsumi",
+        "icon": "$(table)"
+      },
+      {
+        "command": "datsumi.disconnect",
+        "title": "Disconnect",
+        "category": "Datsumi",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "datsumi.removeConnection",
+        "title": "Remove Connection…",
+        "category": "Datsumi",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "datsumi.formatSql",
+        "title": "Format SQL",
+        "category": "Datsumi",
+        "icon": "$(code)"
+      },
+      {
+        "command": "datsumi.renameResult",
+        "title": "Rename Tab…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.closeResult",
+        "title": "Close Tab",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.showRelationships",
+        "title": "View Relationships",
+        "category": "Datsumi",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "datsumi.showHistory",
+        "title": "Query History",
+        "category": "Datsumi",
+        "icon": "$(history)"
+      },
+      {
+        "command": "datsumi.clearHistory",
+        "title": "Clear Query History",
+        "category": "Datsumi",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "datsumi.explainQuery",
+        "title": "Explain Query",
+        "category": "Datsumi",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "datsumi.configureSqlEditor",
+        "title": "SQL Editor Settings…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.addConnection",
+        "title": "Add Database Connection",
+        "category": "Datsumi",
+        "icon": "$(add)"
+      },
+      {
+        "command": "datsumi.manageDrivers",
+        "title": "Manage Database Support",
+        "category": "Datsumi",
+        "icon": "$(extensions)"
+      },
+      {
+        "command": "datsumi.forgetCredentials",
+        "title": "Forget Credentials…",
+        "category": "Datsumi",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "datsumi.changeCredentials",
+        "title": "Edit Credentials…",
+        "category": "Datsumi",
+        "icon": "$(key)"
+      },
+      {
+        "command": "datsumi.stageJsonValue",
+        "title": "Stage JSON Value",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.transaction",
+        "title": "Commit / Rollback Transaction…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.setEnvironment",
+        "title": "Set Environment…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.quickOpen",
+        "title": "Go to Database Object…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.filterObjects",
+        "title": "Filter Objects…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.toggleFavorite",
+        "title": "Toggle Favorite",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.toggleHistory",
+        "title": "Query History Settings…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.openDuckdb",
+        "title": "Open DuckDB Database",
+        "category": "Datsumi",
+        "icon": "$(database)"
+      },
+      {
+        "command": "datsumi.searchHistory",
+        "title": "Search Query History…",
+        "category": "Datsumi",
+        "icon": "$(search)"
+      },
+      {
+        "command": "datsumi.openHistory",
+        "title": "Open Query",
+        "category": "Datsumi",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "datsumi.copyHistory",
+        "title": "Copy Query",
+        "category": "Datsumi",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "datsumi.favoriteHistory",
+        "title": "Toggle Favorite",
+        "category": "Datsumi",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "datsumi.deleteHistory",
+        "title": "Delete History Entry",
+        "category": "Datsumi",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "datsumi.runQueryNewResult",
+        "title": "Run Query in New Result",
+        "category": "Datsumi",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "datsumi.pinResult",
+        "title": "Pin / Unpin Result",
+        "category": "Datsumi",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "datsumi.forgetSshHostKey",
+        "title": "Forget SSH Host Key",
+        "category": "Datsumi"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "datsumi.refreshConnections",
+          "when": "view == datsumi.connections",
+          "group": "navigation@2"
+        },
+        {
+          "command": "datsumi.addConnection",
+          "when": "view == datsumi.connections",
+          "group": "navigation@0"
+        },
+        {
+          "command": "datsumi.showHistory",
+          "when": "view == datsumi.connections",
+          "group": "navigation@1"
+        },
+        {
+          "command": "datsumi.searchHistory",
+          "when": "view == datsumi.history",
+          "group": "navigation@1"
+        },
+        {
+          "command": "datsumi.clearHistory",
+          "when": "view == datsumi.history",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "datsumi.newQuery",
+          "when": "view == datsumi.connections && viewItem =~ /^(connection|table|view)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "datsumi.selectConnection",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "connection@1"
+        },
+        {
+          "command": "datsumi.openTable",
+          "when": "view == datsumi.connections && viewItem =~ /^(table|view)$/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "datsumi.disconnect",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "connection@2"
+        },
+        {
+          "command": "datsumi.removeConnection",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "connection@3"
+        },
+        {
+          "command": "datsumi.showRelationships",
+          "when": "view == datsumi.connections && viewItem =~ /^(connection|table|view)$/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "datsumi.filterObjects",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "navigation@8"
+        },
+        {
+          "command": "datsumi.toggleFavorite",
+          "when": "view == datsumi.connections && viewItem =~ /^(table|view|collection)$/",
+          "group": "navigation@7"
+        },
+        {
+          "command": "datsumi.showHistory",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "navigation@3"
+        },
+        {
+          "submenu": "datsumi.connectionSettings",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "connection@4"
+        },
+        {
+          "command": "datsumi.copyHistory",
+          "when": "view == datsumi.history && viewItem == historyEntry",
+          "group": "history"
+        },
+        {
+          "command": "datsumi.favoriteHistory",
+          "when": "view == datsumi.history && viewItem == historyEntry",
+          "group": "history"
+        },
+        {
+          "command": "datsumi.deleteHistory",
+          "when": "view == datsumi.history && viewItem == historyEntry",
+          "group": "history"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "datsumi.runQuery",
+          "when": "editorLangId == sql",
+          "group": "navigation@1"
+        },
+        {
+          "command": "datsumi.formatSql",
+          "when": "editorLangId == sql",
+          "group": "navigation@2"
+        },
+        {
+          "command": "datsumi.stageJsonValue",
+          "when": "datsumi.jsonDraftActive",
+          "group": "navigation"
+        },
+        {
+          "command": "datsumi.showHistory",
+          "when": "editorLangId == sql",
+          "group": "navigation@3"
+        },
+        {
+          "command": "datsumi.runQueryNewResult",
+          "when": "editorLangId == sql",
+          "group": "datsumi@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "datsumi.runQuery",
+          "when": "editorLangId == sql",
+          "group": "datsumi@1"
+        },
+        {
+          "command": "datsumi.runQueryNewResult",
+          "when": "editorLangId == sql",
+          "group": "datsumi@2"
+        },
+        {
+          "command": "datsumi.showHistory",
+          "when": "editorLangId == sql",
+          "group": "datsumi@4"
+        },
+        {
+          "submenu": "datsumi.sqlTools",
+          "when": "editorLangId == sql",
+          "group": "datsumi@5"
+        }
+      ],
+      "explorer/context": [],
+      "webview/context": [
+        {
+          "command": "datsumi.renameResult",
+          "when": "webviewId == 'datsumi.queryResults' && webviewSection == 'resultTab'",
+          "group": "datsumi@1"
+        },
+        {
+          "command": "datsumi.pinResult",
+          "when": "webviewId == 'datsumi.queryResults' && webviewSection == 'resultTab'",
+          "group": "datsumi@1"
+        },
+        {
+          "command": "datsumi.closeResult",
+          "when": "webviewId == 'datsumi.queryResults' && webviewSection == 'resultTab'",
+          "group": "datsumi@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "datsumi.openSqlite",
+          "when": "false"
+        },
+        {
+          "command": "datsumi.openDuckdb",
+          "when": "false"
+        },
+        {
+          "command": "datsumi.openHistory",
+          "when": "false"
+        },
+        {
+          "command": "datsumi.copyHistory",
+          "when": "false"
+        },
+        {
+          "command": "datsumi.favoriteHistory",
+          "when": "false"
+        },
+        {
+          "command": "datsumi.deleteHistory",
+          "when": "false"
+        }
+      ],
+      "datsumi.sqlTools": [
+        {
+          "command": "datsumi.explainQuery",
+          "group": "tools@1"
+        },
+        {
+          "command": "datsumi.configureSqlEditor",
+          "group": "tools@2"
+        }
+      ],
+      "datsumi.connectionSettings": [
+        {
+          "command": "datsumi.changeCredentials",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "credentials"
+        },
+        {
+          "command": "datsumi.forgetCredentials",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "credentials"
+        },
+        {
+          "command": "datsumi.setEnvironment",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "navigation@8"
+        },
+        {
+          "command": "datsumi.toggleHistory",
+          "when": "view == datsumi.connections && viewItem == connection",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "datsumi.connections",
+        "contents": "Connect to a database to browse data and run queries.\n[Add Database Connection](command:datsumi.addConnection)"
+      },
+      {
+        "view": "datsumi.history",
+        "contents": "Run a query to see its SQL, database, time and status here. Select an entry to reopen it without executing. History is stored locally for this workspace."
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "datsumi.runQuery",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorTextFocus && (editorLangId == sql || datsumi.queryEditorActive)"
+      },
+      {
+        "command": "datsumi.quickOpen",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "datsumi.runQueryNewResult",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "editorTextFocus && (editorLangId == sql || datsumi.queryEditorActive)"
+      },
+      {
+        "command": "datsumi.formatSql",
+        "key": "shift+alt+f",
+        "linux": "ctrl+shift+i",
+        "mac": "shift+alt+f",
+        "when": "editorTextFocus && editorLangId == sql"
+      }
+    ],
+    "configuration": {
+      "title": "Datsumi",
+      "properties": {
+        "datsumi.history.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Store the last 200 executed SQL statements locally in this workspace. SQL may contain sensitive values. Use Clear Query History to remove stored entries."
+        },
+        "datsumi.drivers.downloadBaseUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "markdownDescription": "HTTPS release directory for optional driver artifacts matching this extension’s pinned catalog. Set in User Settings; workspace overrides are ignored. Leave empty to install driver files offline."
+        },
+        "datsumi.history.limit": {
+          "type": "number",
+          "default": 200,
+          "minimum": 10,
+          "maximum": 2000,
+          "description": "Number of recent executed statements to retain locally (favorites are retained separately)."
+        },
+        "datsumi.history.disabledConnections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Connection IDs for which SQL/query history is disabled."
+        },
+        "datsumi.results.reuseTabs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reuse the active unpinned result tab when running another query on the same connection. Pinned results are preserved. Run Query in New Result always creates a separate tab."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[sql]": {
+        "editor.defaultFormatter": "philipp-manhart.datsumi",
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
+        "editor.suggestOnTriggerCharacters": true,
+        "editor.suggest.showKeywords": true,
+        "editor.suggest.showClasses": true,
+        "editor.suggest.showFields": true,
+        "editor.suggest.showInterfaces": true,
+        "editor.tabCompletion": "on"
+      }
+    },
+    "submenus": [
+      {
+        "id": "datsumi.sqlTools",
+        "label": "Database Tools"
+      },
+      {
+        "id": "datsumi.connectionSettings",
+        "label": "Connection Settings"
+      }
+    ]
+  },
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:sql"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "engines": {
+    "vscode": "^1.138.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Database connections and SQL execution require a trusted workspace."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "SQLite requires access to the extension host filesystem."
+    }
+  }
+}

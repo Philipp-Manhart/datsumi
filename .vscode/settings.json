@@ -1,0 +1,23 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/.turbo": true,
+    "**/dist": true
+  },
+  "oxc.typeAware": true,
+  "[sql]": {
+    "editor.defaultFormatter": "philipp-manhart.datsumi",
+    "editor.quickSuggestions": {
+      "other": "on",
+      "comments": "off",
+      "strings": "off"
+    },
+    "editor.suggestOnTriggerCharacters": true,
+    "editor.suggest.showKeywords": true,
+    "editor.tabCompletion": "on"
+  }
+}

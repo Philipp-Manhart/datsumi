@@ -1,0 +1,23 @@
+services:
+  mongodb:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: datsumi
+      MONGO_INITDB_ROOT_PASSWORD: Datsumi_Test_Only_2026
+    ports:
+      - "127.0.0.1::27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:8.2-alpine
+    command: ["redis-server", "--requirepass", "Datsumi_Test_Only_2026"]
+    ports:
+      - "127.0.0.1::6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Datsumi_Test_Only_2026", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

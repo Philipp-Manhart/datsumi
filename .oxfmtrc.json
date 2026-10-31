@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/.turbo/**"],
+  "printWidth": 100,
+  "sortImports": {},
+  "sortPackageJson": {
+    "sortScripts": true
+  },
+  "sortTailwindcss": {
+    "functions": ["cn", "clsx", "cva"],
+    "stylesheet": "./apps/webview/src/index.css"
+  }
+}

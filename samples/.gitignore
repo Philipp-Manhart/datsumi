@@ -1,0 +1,8 @@
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp/

@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "perf": "warn",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/.turbo/**"],
+  "options": {
+    "typeAware": true
+  },
+  "plugins": ["typescript", "react", "react-perf", "react-hooks", "jsx-a11y", "import", "vitest"],
+  "rules": {
+    "import/no-cycle": "error",
+    "import/no-unassigned-import": "off",
+    "react/jsx-key": "error",
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-floating-promises": "error"
+  }
+}

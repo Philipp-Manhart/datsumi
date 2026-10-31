@@ -1,0 +1,12 @@
+:root {
+  --background: var(--vscode-editor-background, #ffffff);
+  --foreground: var(--vscode-editor-foreground, #1f2328);
+  --border: var(--vscode-panel-border, #d0d7de);
+  --input: var(--vscode-input-background, #ffffff);
+  --input-foreground: var(--vscode-input-foreground, #1f2328);
+  --primary: var(--vscode-button-background, #0969da);
+  --primary-foreground: var(--vscode-button-foreground, #ffffff);
+  --muted: var(--vscode-sideBar-background, #f6f8fa);
+  --muted-foreground: var(--vscode-descriptionForeground, #59636e);
+  --ring: var(--vscode-focusBorder, #0969da);
+}

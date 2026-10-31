@@ -1,0 +1,7 @@
+{
+  "collection": "customers",
+  "filter": {},
+  "sort": {
+    "name": 1
+  }
+}

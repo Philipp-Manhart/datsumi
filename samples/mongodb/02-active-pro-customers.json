@@ -1,0 +1,13 @@
+{
+  "collection": "customers",
+  "filter": {
+    "active": true,
+    "plan": "pro"
+  },
+  "projection": {
+    "name": 1,
+    "email": 1,
+    "address": 1,
+    "plan": 1
+  }
+}

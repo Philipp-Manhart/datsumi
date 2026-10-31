@@ -1,0 +1,32 @@
+{
+  "name": "@datsumi/driver-sql",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./configuration": "./src/configuration.ts",
+    "./dialect": "./src/dialect.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@clickhouse/client": "1.24.1",
+    "@datsumi/core": "workspace:*",
+    "@datsumi/driver-api": "workspace:*",
+    "@libsql/client": "0.18.0",
+    "@tursodatabase/serverless": "1.4.1",
+    "mariadb": "3.5.4",
+    "mysql2": "3.24.6",
+    "oracledb": "26.0.0",
+    "pg": "8.23.1",
+    "tedious": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/oracledb": "26.0.1",
+    "@types/pg": "^8.15.6",
+    "esbuild": "^0.28.2"
+  }
+}
