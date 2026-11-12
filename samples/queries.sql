@@ -1,3 +1,6 @@
+-- Wide grid: 80 columns, 500 rows. Scroll to segment_10 or copy all rows into Excel.
+SELECT * FROM wide_table ORDER BY id;
+
 -- Open playground.sqlite using Datsumi: Open SQLite Database.
 -- Select ONE statement below, then press Ctrl+Enter / Cmd+Enter.
 -- Running this entire file is intentionally rejected: the extension runs one statement at a time.

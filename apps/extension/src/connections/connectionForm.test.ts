@@ -1,7 +1,7 @@
 import type { ConnectionFormValues } from "@datsumi/protocol";
 import { describe, it, expect } from "vitest";
 
-import { serverFormSetup } from "./connectionForm";
+import { serverFormSetup, profileFormValues } from "./connectionForm";
 const values: ConnectionFormValues = {
   driver: "postgres",
   mode: "fields",
@@ -164,4 +164,26 @@ it.each(["libsql", "turso"] as const)("separates %s tokens from profile settings
       ssh: { enabled: true, host: "vps", port: "22", username: "me", keyPath: "" },
     }),
   ).toThrow("do not support built-in SSH");
+});
+
+it("never prefills credentials while duplicating or editing a profile", () => {
+  const values = profileFormValues({
+    id: "id",
+    name: "Source",
+    driverId: "postgres",
+    family: "relational",
+    configuration: {
+      host: "db.example",
+      port: 5432,
+      database: "db",
+      username: "user",
+      tls: "verify",
+      ca: "",
+      readOnly: false,
+      password: "must-not-copy",
+    },
+  });
+  expect(values.password).toBe("");
+  expect(values.credentialMode).toBe("session");
+  expect(JSON.stringify(values)).not.toContain("must-not-copy");
 });

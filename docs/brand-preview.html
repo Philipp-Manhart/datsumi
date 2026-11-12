@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Datsumi identity</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--foreground, #e9eeec);
+        font-family: var(--font-sans, system-ui, sans-serif);
+      }
+      .intro {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        padding: 24px;
+        border-radius: 16px;
+        background: #142326;
+        color: #f5f5f1;
+      }
+      .logo svg {
+        display: block;
+        width: 112px;
+        height: 112px;
+      }
+      .name {
+        font-size: 32px;
+        font-weight: 650;
+        letter-spacing: -1px;
+        margin: 0 0 8px;
+      }
+      .slogan {
+        font-size: 18px;
+        color: #a1e8cf;
+        margin: 0 0 8px;
+      }
+      .descriptor {
+        font-size: 13px;
+        color: #a8b7b2;
+        margin: 0;
+      }
+      .variants {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin: 16px 0;
+      }
+      .variant {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 20px;
+        border-radius: 14px;
+        background: var(--card, #202625);
+        border: 1px solid var(--border, #333b38);
+      }
+      .variant svg {
+        display: block;
+        width: 72px;
+        height: 72px;
+        flex-shrink: 0;
+      }
+      .variant .label {
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .label small {
+        display: block;
+        color: var(--muted-foreground, #9ea8a3);
+      }
+      .sizes {
+        display: flex;
+        gap: 22px;
+        align-items: center;
+        margin-top: 16px;
+      }
+      .sizes span {
+        display: grid;
+        gap: 8px;
+        justify-items: center;
+        color: var(--muted-foreground, #9ea8a3);
+        font-size: 11px;
+      }
+      .sizes svg {
+        display: block;
+        width: auto;
+        height: auto;
+      }
+      .sizes svg path {
+        stroke: var(--foreground, #e9eeec);
+      }
+      .palette {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+      }
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        color: var(--muted-foreground, #9ea8a3);
+        padding: 5px 0;
+        margin-right: 10px;
+      }
+      .dot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        border: 1px solid #ffffff22;
+      }
+      .copy {
+        font-size: 14px;
+        line-height: 1.7;
+        margin: 16px 0 0;
+        color: var(--muted-foreground, #9ea8a3);
+      }
+      @media (max-width: 500px) {
+        .intro {
+          padding: 18px;
+          gap: 12px;
+        }
+        .logo svg {
+          width: 76px;
+          height: 76px;
+        }
+        .name {
+          font-size: 26px;
+        }
+        .slogan {
+          font-size: 15px;
+        }
+        .descriptor {
+          font-size: 11px;
+        }
+        .variants {
+          grid-template-columns: 1fr;
+        }
+        .variant {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="intro">
+      <div class="logo">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="256"
+          height="256"
+          viewBox="0 0 256 256"
+          fill="none"
+        >
+          <title>Datsumi</title>
+          <rect width="256" height="256" rx="48" fill="#142326" />
+          <path
+            d="M72 56H116C164 56 188 82 188 128S164 200 116 200H72"
+            stroke="#A1E8CF"
+            stroke-width="22"
+            stroke-linecap="round"
+          />
+          <path
+            d="M72 94H112M72 128H126M72 162H112"
+            stroke="#63BBA8"
+            stroke-width="16"
+            stroke-linecap="round"
+          />
+        </svg>
+      </div>
+      <div>
+        <p class="name">Datsumi</p>
+        <p class="slogan">Every database. One workspace.</p>
+        <p class="descriptor">Universal Database Explorer for VS Code</p>
+      </div>
+    </div>
+    <div class="variants">
+      <div class="variant">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="256"
+          height="256"
+          viewBox="0 0 256 256"
+          fill="none"
+        >
+          <title>Datsumi — light</title>
+          <rect width="256" height="256" rx="48" fill="#F5F5F1" />
+          <path
+            d="M72 56H116C164 56 188 82 188 128S164 200 116 200H72"
+            stroke="#1C3034"
+            stroke-width="22"
+            stroke-linecap="round"
+          />
+          <path
+            d="M72 94H112M72 128H126M72 162H112"
+            stroke="#2C867A"
+            stroke-width="16"
+            stroke-linecap="round"
+          />
+        </svg>
+        <div class="label">Light identity<small>Ivory, graphite and deep teal</small></div>
+      </div>
+      <div class="variant">
+        <div>
+          <div class="label">Native sidebar mark<small>Monochrome, shaped for VS Code</small></div>
+          <div class="sizes">
+            <span
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <title>Datsumi</title>
+                <path
+                  d="M5 3H10.5C16.5 3 20 6.1 20 12S16.5 21 10.5 21H5"
+                  stroke="#C5C5C5"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M5 7.5H10.5M5 12H12M5 16.5H10.5"
+                  stroke="#C5C5C5"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+              16 px</span
+            ><span
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <title>Datsumi</title>
+                <path
+                  d="M5 3H10.5C16.5 3 20 6.1 20 12S16.5 21 10.5 21H5"
+                  stroke="#C5C5C5"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M5 7.5H10.5M5 12H12M5 16.5H10.5"
+                  stroke="#C5C5C5"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+              24 px</span
+            ><span
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <title>Datsumi</title>
+                <path
+                  d="M5 3H10.5C16.5 3 20 6.1 20 12S16.5 21 10.5 21H5"
+                  stroke="#C5C5C5"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M5 7.5H10.5M5 12H12M5 16.5H10.5"
+                  stroke="#C5C5C5"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+              32 px</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="palette">
+      <span class="chip"><i class="dot" style="background: #142326"></i>Midnight · #142326</span
+      ><span class="chip"><i class="dot" style="background: #a1e8cf"></i>Mint · #A1E8CF</span
+      ><span class="chip"><i class="dot" style="background: #2c867a"></i>Teal · #2C867A</span
+      ><span class="chip"><i class="dot" style="background: #f5f5f1"></i>Ivory · #F5F5F1</span>
+    </div>
+    <p class="copy">
+      A modern, unified database client for VS Code. Explore, query, and manage SQL and NoSQL
+      databases without leaving your editor.
+    </p>
+  </body>
+</html>

@@ -9,6 +9,7 @@ const mock = vi.hoisted(() => ({
   states: [] as unknown[],
 }));
 vi.mock("vscode", () => ({
+  workspace: { getConfiguration: () => ({ inspect: () => ({ globalValue: undefined }) }) },
   ViewColumn: { Active: 1 },
   window: {
     createWebviewPanel: () => ({

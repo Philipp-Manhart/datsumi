@@ -175,3 +175,31 @@ it.each(["libsql", "turso"])("offers a URL and separate secure token for %s", (d
     }),
   );
 });
+
+it("scopes server access controls to grid edits and accepts non-secret edit prefills", () => {
+  render(<ConnectionForm postMessage={vi.fn<(message: unknown) => void>()} />);
+  fireEvent.change(screen.getByLabelText("Database type"), { target: { value: "postgres" } });
+  expect(screen.queryByLabelText("Read-only connection")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Disable grid editing")).toBeInTheDocument();
+  expect(screen.getByText(/Editor SQL always uses/)).toBeInTheDocument();
+  void act(() =>
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          type: "connection/state",
+          title: "Edit Database Connection",
+          initial: {
+            driver: "libsql",
+            mode: "url",
+            name: "Example",
+            url: "https://example.com",
+            password: "must-not-prefill",
+          },
+        },
+      }),
+    ),
+  );
+  expect(screen.getByRole("heading", { name: "Edit Database Connection" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Authentication token")).toHaveValue("");
+  expect(screen.getByLabelText("Database type")).toBeDisabled();
+});

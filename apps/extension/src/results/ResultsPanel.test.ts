@@ -11,6 +11,7 @@ const mock = vi.hoisted(() => ({
   confirm: vi.fn<() => Promise<string | undefined>>(async () => "Commit changes"),
 }));
 vi.mock("vscode", () => ({
+  workspace: { getConfiguration: () => ({ get: (_key: string, fallback: unknown) => fallback }) },
   env: { clipboard: { writeText: mock.clipboard } },
   EventEmitter: class {
     event = () => ({ dispose() {} });
@@ -104,7 +105,7 @@ describe("table webview host", () => {
       hasMore: request.offset + request.limit < rows.length,
     }));
     const connections = {
-      get: () => ({ name: "example.sqlite", driverId: "sqlite" }),
+      get: () => ({ name: "example.sqlite", driverId: "sqlite", configuration: {} }),
       schema: async () => [info],
       browse,
     } as unknown as ConnectionManager;

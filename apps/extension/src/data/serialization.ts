@@ -1,7 +1,8 @@
+import { spreadsheetText } from "@datsumi/core";
 import type { CellValue, QueryResult } from "@datsumi/core";
 import { parse } from "csv-parse/sync";
 type Table = Extract<QueryResult, { kind: "table" }>;
-export function serializeResult(result: Table, format: "csv" | "json"): string {
+export function serializeResult(result: Table, format: "csv" | "json", safe = false): string {
   if (format === "json")
     return (
       JSON.stringify(
@@ -16,7 +17,9 @@ export function serializeResult(result: Table, format: "csv" | "json"): string {
       ? ""
       : typeof value === "object"
         ? JSON.stringify(value)
-        : String(value)
+        : typeof value === "string"
+          ? spreadsheetText(value, safe)
+          : String(value)
     ).replaceAll('"', '""') +
     '"';
   return (

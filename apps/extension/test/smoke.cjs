@@ -891,6 +891,82 @@ exports.run = async function () {
           ),
         "Native DuckDB table browser opened",
       );
+      const manager = resultsProvider.connections;
+      const metricsInfo = (await manager.schema(duck.id)).find(
+        (item) => item.name === "main.metrics",
+      );
+      assert.equal(metricsInfo.editable, true, "DuckDB writable keyed tables enable editing");
+      const metricsPage = await manager.browse(duck.id, {
+        resourceId: metricsInfo.resourceId,
+        offset: 0,
+        limit: 10,
+      });
+      const metricsOriginal = Object.fromEntries(
+        metricsPage.result.columns.map((name, i) => [name, metricsPage.result.rows[0][i]]),
+      );
+      const metricsChanges = {
+        resourceId: metricsInfo.resourceId,
+        changes: [{ kind: "update", original: metricsOriginal, values: { value: "456.78" } }],
+      };
+      await manager.changeRows(duck.id, metricsChanges, false);
+      assert.deepEqual(
+        (
+          await manager.browse(duck.id, {
+            resourceId: metricsInfo.resourceId,
+            offset: 0,
+            limit: 10,
+          })
+        ).result.rows,
+        metricsPage.result.rows,
+        "DuckDB preview does not write",
+      );
+      await manager.changeRows(duck.id, metricsChanges, true);
+      assert.equal(
+        (
+          await manager.browse(duck.id, {
+            resourceId: metricsInfo.resourceId,
+            offset: 0,
+            limit: 10,
+          })
+        ).result.rows[0][1],
+        "456.78",
+        "DuckDB commits reviewed edit",
+      );
+      await assert.rejects(
+        manager.changeRows(
+          duck.id,
+          {
+            resourceId: metricsInfo.resourceId,
+            changes: [
+              {
+                kind: "update",
+                original: { ...metricsOriginal, value: "456.78" },
+                values: { value: "999" },
+              },
+              metricsChanges.changes[0],
+            ],
+          },
+          true,
+        ),
+        /Edit conflict/,
+      );
+      assert.equal(
+        (
+          await manager.browse(duck.id, {
+            resourceId: metricsInfo.resourceId,
+            offset: 0,
+            limit: 10,
+          })
+        ).result.rows[0][1],
+        "456.78",
+        "DuckDB conflict rolls back every edit in the batch",
+      );
+      await manager.execute(duck.id, { language: "sql", text: "BEGIN" });
+      await assert.rejects(
+        manager.changeRows(duck.id, metricsChanges, true),
+        /open SQL transaction/,
+      );
+      await manager.execute(duck.id, { language: "sql", text: "ROLLBACK" });
       await vscode.commands.executeCommand("datsumi.disconnect", { connectionId: duck.id });
       duckMode = "Open existing database";
       vscode.window.showOpenDialog = async () => [vscode.Uri.file(duckPath)];

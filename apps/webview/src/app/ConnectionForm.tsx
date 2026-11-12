@@ -43,6 +43,7 @@ export function ConnectionForm({
 }: {
   postMessage?: (message: unknown) => void;
 }) {
+  const [formTitle, setFormTitle] = useState("Add Database Connection");
   const [values, setValues] = useState(defaults),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
@@ -51,6 +52,9 @@ export function ConnectionForm({
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       const data = event.data as {
+        initial?: Partial<ConnectionFormValues>;
+        title?: string;
+        defaults?: { credentialMode?: "session" | "save" | "ask" };
         type?: string;
         busy?: boolean;
         error?: string | null;
@@ -59,6 +63,10 @@ export function ConnectionForm({
         sshKeyPath?: string;
       };
       if (data?.type !== "connection/state") return;
+      if (data.title) setFormTitle(data.title);
+      if (data.initial) setValues((previous) => ({ ...previous, ...data.initial, password: "" }));
+      if (data.defaults?.credentialMode)
+        setValues((previous) => ({ ...previous, credentialMode: data.defaults!.credentialMode! }));
       if (data.busy !== undefined) setBusy(data.busy);
       if (data.error !== undefined) setError(data.error);
       if (data.status !== undefined) setStatus(data.status);
@@ -163,7 +171,7 @@ export function ConnectionForm({
         }}
       >
         <header>
-          <h1>Add Database Connection</h1>
+          <h1>{formTitle}</h1>
           <p>Choose a database and enter its connection details.</p>
         </header>
         <fieldset disabled={busy}>
@@ -171,6 +179,7 @@ export function ConnectionForm({
             Database type
             <select
               aria-label="Database type"
+              disabled={formTitle === "Edit Database Connection"}
               value={values.driver}
               onChange={(event) => {
                 const driver = event.target.value as ConnectionFormValues["driver"];
@@ -189,6 +198,7 @@ export function ConnectionForm({
                   )[driver] ?? "";
                 setValues({
                   ...defaults,
+                  credentialMode: values.credentialMode,
                   driver,
                   mode: ["libsql", "turso"].includes(driver) ? "url" : "fields",
                   port,
@@ -262,7 +272,10 @@ export function ConnectionForm({
           )}
           {["clickhouse", "oracle"].includes(values.driver) && (
             <p>
-              Queries, browsing and export are supported. Grid editing is disabled.
+              Queries, browsing and export are supported.
+              {values.driver === "clickhouse"
+                ? " Grid editing is unavailable because this adapter cannot roll back an edit batch."
+                : " Writable tables with primary keys support staged editing, review and confirmed commit."}
               {values.driver === "oracle"
                 ? " Database is the Oracle service name. Writes stay pending until COMMIT; disconnect rolls them back. DDL can commit implicitly."
                 : " Use the HTTP(S) port, normally 8123 locally or 8443 for ClickHouse Cloud. Transactions are not supported."}
@@ -281,7 +294,7 @@ export function ConnectionForm({
           )}
           {local ? (
             <>
-              {values.driver === "duckdb" && (
+              {local && (
                 <label>
                   Database file mode
                   <select
@@ -550,17 +563,31 @@ export function ConnectionForm({
               )}
             </section>
           )}
-          {(local || noSql) && (
-            <label className="check-label">
-              <input
-                aria-label="Read-only connection"
-                type="checkbox"
-                checked={values.readOnly}
-                onChange={(event) => change("readOnly", event.target.checked)}
-              />
-              Read-only connection
-            </label>
-          )}
+          {
+            <>
+              <label className="check-label">
+                <input
+                  aria-label={
+                    local || ["mongodb", "redis"].includes(values.driver)
+                      ? "Read-only connection"
+                      : "Disable grid editing"
+                  }
+                  type="checkbox"
+                  checked={values.readOnly}
+                  onChange={(event) => change("readOnly", event.target.checked)}
+                />
+                {local || ["mongodb", "redis"].includes(values.driver)
+                  ? "Read-only connection"
+                  : "Disable grid editing"}
+              </label>
+              {!local && !noSql && (
+                <small>
+                  Editor SQL always uses your database account permissions. Use a read-only database
+                  account to prohibit all writes.
+                </small>
+              )}
+            </>
+          }
           {error && (
             <p role="alert" className="error">
               {error}

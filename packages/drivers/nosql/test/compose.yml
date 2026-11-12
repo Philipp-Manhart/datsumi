@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: mongo:8.0
+    image: mongo:8.0@sha256:4a4ab5d4834207389e0d7270fac988e21ffedccecba77991a552f755df229907
     environment:
       MONGO_INITDB_ROOT_USERNAME: datsumi
       MONGO_INITDB_ROOT_PASSWORD: Datsumi_Test_Only_2026
@@ -12,7 +12,7 @@ services:
       timeout: 5s
       retries: 30
   redis:
-    image: redis:8.2-alpine
+    image: redis:8.2-alpine@sha256:35bf3d49a07b693d8defb4e4fc9ef8c663f71c2993f181eba99c7b72966c1f9b
     command: ["redis-server", "--requirepass", "Datsumi_Test_Only_2026"]
     ports:
       - "127.0.0.1::6379"

@@ -1,3 +1,6 @@
+-- Wide grid: 80 columns, 500 rows. Scroll to segment_10 or copy all rows into Excel.
+SELECT * FROM demo.wide_table ORDER BY id;
+
 -- Add Database Connection → DuckDB → Open existing database → playground.duckdb.
 -- Bind this SQL file to the DuckDB connection using the bottom status bar.
 -- Run a statement with Ctrl+Enter / Cmd+Enter; select several statements to run together.

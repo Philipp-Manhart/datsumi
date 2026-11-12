@@ -170,3 +170,15 @@ it("restores local DuckDB profiles without credentials and keeps creation flags 
   await restored.dispose();
   await manager.dispose();
 });
+
+it("duplicates local settings into a distinct disconnected profile without opening the file again", async () => {
+  const f = fixture();
+  const profile = await f.manager.addSqlite("/tmp/duplicate.sqlite", false);
+  const before = f.driver.connect.mock.calls.length;
+  const copy = await f.manager.duplicateLocal(profile.id);
+  expect(copy.id).not.toBe(profile.id);
+  expect(copy.name).toContain("copy");
+  expect(copy.configuration).toEqual(profile.configuration);
+  expect(f.driver.connect).toHaveBeenCalledTimes(before);
+  await f.manager.dispose();
+});

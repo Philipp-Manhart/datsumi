@@ -11,7 +11,11 @@ import {
 import * as vscode from "vscode";
 
 import type { ConnectionManager } from "../connections/ConnectionManager";
+import { saveEditDraft } from "../data/editDraft";
 import { exportPath, importCsv, saveResult } from "../data/files";
+import { resultSettings, defaultPageSize } from "../settings";
+import type { DraftStore } from "./DraftStore";
+import { editingFeedback } from "./editingFeedback";
 import { initializeResultsWebview } from "./webview";
 
 export interface PanelActions {
@@ -19,6 +23,12 @@ export interface PanelActions {
   diagram(connectionId: string, focus?: string): Promise<void>;
   sql(connectionId: string, text: string): Promise<void>;
   changed(): void;
+  drafts?: DraftStore;
+  restoreDraft?(
+    connectionId: string,
+    table: TableInfo,
+    changes: readonly import("@datsumi/core").RowChange[],
+  ): Promise<void>;
   json?(text: string, stage: (text: string) => Promise<void>): Promise<void>;
 }
 
@@ -28,6 +38,32 @@ export class ResultsPanel implements vscode.Disposable {
   private readonly subscriptions: vscode.Disposable[] = [];
   private state: WebviewResponse;
   private disposed = false;
+  private recoveryChecked = false;
+  hasPendingEdits(): boolean {
+    return Boolean(this.state.staged?.length);
+  }
+  refreshSettings(): void {
+    this.send();
+  }
+  async stageDraft(changes: readonly import("@datsumi/core").RowChange[]): Promise<void> {
+    this.state = { ...this.state, staged: [...changes], previewSql: [] };
+    this.send();
+  }
+  private async persistDraft(): Promise<void> {
+    if (!this.state.tableInfo || !this.actions?.drafts) return;
+    try {
+      await this.actions.drafts.save(
+        this.actions.drafts.key(this.connections.get(this.connectionId), this.state.tableInfo),
+        this.state.staged ?? [],
+      );
+    } catch {
+      void vscode.window.showWarningMessage(
+        this.state.staged?.length
+          ? "The edit draft could not be saved for recovery. Your in-memory edits are retained; use Save draft to keep a copy."
+          : "Database edits were committed or discarded, but saved recovery data could not be cleared. Clear saved drafts before reusing a recovered draft.",
+      );
+    }
+  }
   private readonly disposeEmitter = new vscode.EventEmitter<void>();
   readonly onDidDispose = this.disposeEmitter.event;
   private cancellation: vscode.CancellationTokenSource | undefined;
@@ -50,7 +86,7 @@ export class ResultsPanel implements vscode.Disposable {
       busy: false,
       result: null,
       error: null,
-      page: resourceId ? { offset: 0, limit: 100, hasMore: false } : null,
+      page: resourceId ? { offset: 0, limit: defaultPageSize(), hasMore: false } : null,
     };
     const saved = viewPreferencesSchema.safeParse(
       connections.viewState?.(`${connectionId}:${resourceId ?? "diagram"}`),
@@ -100,7 +136,13 @@ export class ResultsPanel implements vscode.Disposable {
         tableInfoSchema.parse(table),
       );
       const tableInfo = schema.find((table) => table.resourceId === this.resourceId);
-      this.state = { ...this.state, mode: "table", tableInfo, schema };
+      this.state = {
+        ...this.state,
+        mode: "table",
+        tableInfo,
+        schema,
+        editingReason: editingFeedback(this.connections.get(this.connectionId), tableInfo),
+      };
       const page = await this.connections.browse(
         this.connectionId,
         {
@@ -117,6 +159,21 @@ export class ResultsPanel implements vscode.Disposable {
         result: webviewResponseSchema.shape.result.parse(page.result),
         page: { offset: page.offset, limit: page.limit, hasMore: page.hasMore },
       };
+      if (!this.recoveryChecked && tableInfo && this.actions?.drafts) {
+        this.recoveryChecked = true;
+        const key = this.actions.drafts.key(this.connections.get(this.connectionId), tableInfo);
+        const saved = this.actions.drafts.load(key);
+        if (saved) {
+          const choice = await vscode.window.showWarningMessage(
+            "A saved local edit draft is available for this table. Restore it for review? Original values are rechecked at commit.",
+            "Restore draft",
+            "Discard saved draft",
+          );
+          if (choice === "Restore draft")
+            this.state = { ...this.state, staged: [...saved.changes], previewSql: [] };
+          else if (choice === "Discard saved draft") await this.actions.drafts.save(key, []);
+        }
+      }
     });
   }
   async diagram(focus?: string): Promise<void> {
@@ -344,6 +401,7 @@ export class ResultsPanel implements vscode.Disposable {
             )),
           ];
           this.state = { ...this.state, previewSql, staged: message.apply ? [] : message.changes };
+          await this.persistDraft();
           if (message.apply) {
             applied = true;
             this.actions?.changed();
@@ -354,12 +412,22 @@ export class ResultsPanel implements vscode.Disposable {
           await this.loadPage(this.state.page?.offset, this.state.page?.limit);
         }
         break;
+      case "table/saveDraft":
+        await saveEditDraft(
+          this.state.connectionName,
+          info?.name ?? this.state.title,
+          message.changes,
+          (path) => this.connections.validateOutputDestination(path),
+        );
+        break;
       case "table/stage":
         if (JSON.stringify(this.state.staged ?? []) !== JSON.stringify(message.changes))
           this.state = { ...this.state, staged: message.changes, previewSql: [] };
+        await this.persistDraft();
         break;
       case "table/discard":
         this.state = { ...this.state, staged: [], previewSql: [] };
+        await this.persistDraft();
         this.send();
         break;
       case "table/value": {
@@ -443,6 +511,9 @@ export class ResultsPanel implements vscode.Disposable {
                 {
                   path,
                   format: message.format,
+                  spreadsheetSafe: vscode.workspace
+                    .getConfiguration("datsumi")
+                    .get("export.spreadsheetSafe", false),
                   request: {
                     resourceId: this.resourceId!,
                     offset: 0,
@@ -505,11 +576,26 @@ export class ResultsPanel implements vscode.Disposable {
   }
   private send(): void {
     if (!this.disposed)
-      void this.panel.webview.postMessage(webviewResponseSchema.parse(this.state));
+      void this.panel.webview.postMessage(
+        webviewResponseSchema.parse({ ...this.state, display: resultSettings() }),
+      );
   }
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    const changes = this.state.staged;
+    const info = this.state.tableInfo;
+    if (changes?.length && info && this.actions?.restoreDraft) {
+      void vscode.window
+        .showWarningMessage(
+          "Table closed with pending edits. Reopen the draft? Reload recovery is available only when explicitly enabled in Settings.",
+          "Reopen draft",
+        )
+        .then((choice) => {
+          if (choice === "Reopen draft")
+            return this.actions?.restoreDraft?.(this.connectionId, info, changes);
+        });
+    }
     this.cancellation?.cancel();
     for (const subscription of this.subscriptions) subscription.dispose();
     this.ownedPanel?.dispose();

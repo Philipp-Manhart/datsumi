@@ -1,7 +1,13 @@
 import { stat } from "node:fs/promises";
 
 /* oxlint-disable typescript/no-unsafe-type-assertion -- Private IPC request payloads are validated by each operation. */
-import type { QueryRequest, TablePageRequest, CellRequest, TableExport } from "@datsumi/core";
+import type {
+  QueryRequest,
+  TablePageRequest,
+  CellRequest,
+  TableExport,
+  TableChanges,
+} from "@datsumi/core";
 
 import { ServerDatabase } from "../../sql/src/database";
 import { DuckDbBackend } from "./backend";
@@ -52,6 +58,11 @@ process.on("message", (message: { id: number; method: string; payload: unknown }
           case "cell":
             result = await database.readCell(message.payload as CellRequest);
             break;
+          case "changes": {
+            const job = message.payload as { request: TableChanges; apply: boolean };
+            result = await database.changes(job.request, job.apply);
+            break;
+          }
           case "export":
             result = await database.export(message.payload as TableExport);
             break;
@@ -59,9 +70,7 @@ process.on("message", (message: { id: number; method: string; payload: unknown }
             result = await database.transactionState();
             break;
           default:
-            throw new Error(
-              "DuckDB grid editing is not available. Use SQL statements to change data.",
-            );
+            throw new Error("Unsupported DuckDB operation.");
         }
       }
       process.send?.({ id: message.id, result });

@@ -3,7 +3,9 @@ import { connectionFormRequestSchema, type ConnectionFormValues } from "@datsumi
 import * as vscode from "vscode";
 
 import { initializeResultsWebview } from "../results/webview";
+import { userSetting } from "../settings";
 import { abortCancellation } from "./cancellation";
+import { connectionHint } from "./connectionHints";
 
 /** Form values and passwords remain ephemeral; only the connection manager persists profiles. */
 export function openConnectionForm(
@@ -13,11 +15,13 @@ export function openConnectionForm(
     test: boolean,
     signal?: DriverCancellation,
   ) => Promise<ConnectionProfile | undefined>,
+  initial?: Partial<ConnectionFormValues>,
+  title = "Add Database Connection",
 ): Promise<ConnectionProfile | undefined> {
   return new Promise((resolve) => {
     const panel = vscode.window.createWebviewPanel(
       "datsumi.connection",
-      "Add Database Connection",
+      title,
       vscode.ViewColumn.Active,
       { retainContextWhenHidden: true },
     );
@@ -46,7 +50,14 @@ export function openConnectionForm(
       const message = parsed.data;
       void (async () => {
         if (message.type === "connection/ready") {
-          await send({ busy: false });
+          await send({
+            busy: false,
+            initial,
+            title,
+            defaults: {
+              credentialMode: userSetting("connections.defaultCredentialMode", "session"),
+            },
+          });
           return;
         }
         if (message.type === "connection/sshKey") {
@@ -65,7 +76,9 @@ export function openConnectionForm(
         }
         if (message.type === "connection/browse") {
           const options = {
-            title: message.create ? "Create DuckDB Database" : "Open Database",
+            title: message.create
+              ? `Create ${message.driver === "sqlite" ? "SQLite" : "DuckDB"} Database`
+              : "Open Database",
             filters: {
               Databases:
                 message.driver === "sqlite" ? ["sqlite", "db", "sqlite3"] : ["duckdb", "db"],
@@ -104,7 +117,8 @@ export function openConnectionForm(
           let text = error instanceof Error ? error.message : "Connection failed.";
           if (message.values.password)
             text = text.replaceAll(message.values.password, "[redacted]");
-          await send({ busy: false, error: text, status: null });
+          const hint = connectionHint(text);
+          await send({ busy: false, error: hint ? `${text} ${hint}` : text, status: null });
         } finally {
           busy = false;
         }

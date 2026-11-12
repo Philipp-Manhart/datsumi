@@ -114,7 +114,10 @@ export class DriverInstaller {
       url = new URL(item.file, base.endsWith("/") ? base : base + "/");
     if (url.protocol !== "https:" || url.username || url.password)
       throw new Error("Driver downloads require an HTTPS URL without credentials.");
-    const response = await fetch(url, { redirect: "error", ...(signal ? { signal } : {}) });
+    const response = await fetch(url, {
+      redirect: "error",
+      signal: AbortSignal.any([AbortSignal.timeout(120000), ...(signal ? [signal] : [])]),
+    });
     if (!response.ok || !response.body) throw new Error("Database driver download failed.");
     const chunks: Uint8Array[] = [];
     let size = 0;

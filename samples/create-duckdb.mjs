@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
+import { wideTableSql } from "./wide-table.mjs";
+
 const require = createRequire(new URL("../packages/drivers/duckdb/package.json", import.meta.url));
 const { DuckDBInstance } = require("@duckdb/node-api");
 const path = fileURLToPath(new URL("./playground.duckdb", import.meta.url));
@@ -55,6 +57,7 @@ try {
     CREATE VIEW demo.customer_summary AS SELECT c.id,c.name,c.plan,count(o.id) AS order_count,coalesce(sum(o.total),0)::DECIMAL(18,2) AS total_spent FROM demo.customers c LEFT JOIN demo.orders o ON o.customer_id=c.id GROUP BY c.id,c.name,c.plan;
     CREATE VIEW demo.low_stock_products AS SELECT * FROM demo.products WHERE stock<20;
     CREATE VIEW analytics.daily_revenue AS SELECT date_trunc('day',ordered_at) AS day,count(*) AS orders,sum(total) AS revenue FROM demo.orders WHERE status<>'cancelled' GROUP BY 1;
+    ${wideTableSql("duckdb")}
     COMMIT;
     CHECKPOINT;
   `);
@@ -70,7 +73,7 @@ try {
   if (JSON.stringify(counts) !== JSON.stringify([375, 1200, 2400, 10000, 0]))
     throw new Error("DuckDB sample validation failed.");
   console.log(
-    `Created ${path}\n9 tables, 3 views; 375 customers, 1,200 orders, 2,400 items, 10,000 events. Counts and foreign-key links verified.`,
+    `Created ${path}\n10 tables, 3 views; demo.wide_table has 80 columns and 500 rows; 375 customers, 1,200 orders, 2,400 items, 10,000 events. Counts and foreign-key links verified.`,
   );
 } finally {
   connection.closeSync();

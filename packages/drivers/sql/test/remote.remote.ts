@@ -55,7 +55,7 @@ for (const id of ["libsql", "turso"] as const) {
       expect(info.columns.map((c) => c.name)).toEqual(["id", "name", "n", "note"]);
       expect(info.columns[0]?.primaryKey).toBe(1);
       expect(info.indexes.some((i) => i.name === `${id}_name`)).toBe(true);
-      expect(info.editable).toBe(false);
+      expect(info.editable).toBe(true);
       expect(schema.find((t) => t.name === `main.${id}_child`)?.foreignKeys[0]?.target).toBe(
         `main.${id}_parent`,
       );
@@ -74,6 +74,80 @@ for (const id of ["libsql", "turso"] as const) {
         filters: [{ column: "name", operator: "=", value: "x' OR 1=1 --" }],
       });
       expect(filtered.result.rows).toEqual([]);
+    });
+    it("previews without writing, commits multiple rows, and rolls the whole batch back on conflict", async () => {
+      const info = (await driver.schema(session)).find((t) => t.name === `main.${id}_parent`)!;
+      const page = await driver.browseTable(session, {
+        resourceId: info.resourceId,
+        offset: 0,
+        limit: 10,
+      });
+      const changes = page.result.rows.map((row) => ({
+        kind: "update" as const,
+        original: Object.fromEntries(page.result.columns.map((name, i) => [name, row[i]!])),
+        values: { name: `edited-${clipboardValue(row[0] ?? null)}` },
+      }));
+      const request = { resourceId: info.resourceId, changes };
+      expect(await driver.changeRows(session, request, false)).toHaveLength(2);
+      expect(
+        (await driver.browseTable(session, { resourceId: info.resourceId, offset: 0, limit: 10 }))
+          .result.rows,
+      ).toEqual(page.result.rows);
+      await query("BEGIN");
+      await expect(driver.changeRows(session, request, true)).rejects.toThrow(
+        "open SQL transaction",
+      );
+      expect(await driver.transactionState(session)).toBe("open");
+      await query("ROLLBACK");
+      const stale = {
+        ...request,
+        changes: [
+          changes[0]!,
+          { ...changes[1]!, original: { ...changes[1]!.original, name: "stale" } },
+        ],
+      };
+      await expect(driver.changeRows(session, stale, true)).rejects.toThrow("Edit conflict");
+      expect(
+        (await driver.browseTable(session, { resourceId: info.resourceId, offset: 0, limit: 10 }))
+          .result.rows,
+      ).toEqual(page.result.rows);
+      expect(await driver.transactionState(session)).toBe("idle");
+      await driver.changeRows(session, request, true);
+      const edited = await driver.browseTable(session, {
+        resourceId: info.resourceId,
+        offset: 0,
+        limit: 10,
+      });
+      expect(edited.result.rows.map((row) => row[1])).toEqual(["edited-1", "edited-2"]);
+      // Reset shared fixtures and prove insert/delete use the same reviewed transaction path.
+      await driver.changeRows(
+        session,
+        {
+          resourceId: info.resourceId,
+          changes: [{ kind: "insert", values: { id: 7, name: "new" } }],
+        },
+        true,
+      );
+      await driver.changeRows(
+        session,
+        {
+          resourceId: info.resourceId,
+          changes: [
+            { kind: "delete", values: {}, original: { id: 7, name: "new", n: null, note: null } },
+          ],
+        },
+        true,
+      );
+      await query(`UPDATE ${id}_parent SET name=CASE id WHEN 1 THEN 'Alice' ELSE 'Bob' END`);
+      const ro = await driver.connect(
+        { ...profile, id: randomUUID() },
+        { ...config, readOnly: true },
+      );
+      try {
+        await expect(driver.changeRows(ro, request, true)).rejects.toThrow("writable");
+      } finally {
+        await driver.disconnect(ro);
+      }
     });
     it("keeps an interactive transaction on its session and rolls it back", async () => {
       await query("BEGIN");

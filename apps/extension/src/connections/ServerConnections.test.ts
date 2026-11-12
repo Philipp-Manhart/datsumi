@@ -294,3 +294,29 @@ it("removes a newly saved profile and tunnel when the form closes during persist
   expect(tunnel.close).toHaveBeenCalledOnce();
   await f.manager.dispose();
 });
+
+it("edits a destination with explicitly supplied credentials, preserving identity and revoking the old secret", async () => {
+  const f = fixture();
+  const original = await f.manager.addServer("postgres", "Before", configuration, {
+    password: "old-sentinel",
+    mode: "save",
+  });
+  const updated = await f.manager.updateServer(
+    original.id,
+    "After",
+    { ...configuration, host: "new.example" },
+    { password: "new-sentinel", mode: "save" },
+  );
+  expect(updated.id).toBe(original.id);
+  expect(updated.configuration.host).toBe("new.example");
+  expect(JSON.stringify(f.update.mock.calls)).not.toContain("new-sentinel");
+  expect(JSON.stringify([...f.secrets.values()])).not.toContain("old-sentinel");
+  await f.manager.disconnect(updated.id);
+  await f.manager.resources(updated.id);
+  expect(f.driver.connect).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: original.id }),
+    expect.objectContaining({ host: "new.example", password: "new-sentinel" }),
+    expect.anything(),
+  );
+  await f.manager.dispose();
+});

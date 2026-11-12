@@ -2,6 +2,8 @@ import { existsSync, unlinkSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
+import { wideTableSql } from "./wide-table.mjs";
+
 const path = fileURLToPath(new URL("./playground.sqlite", import.meta.url));
 if (existsSync(path)) {
   if (!process.argv.includes("--reset"))
@@ -194,6 +196,7 @@ try {
   database
     .prepare('INSERT INTO "order ""notes""" VALUES (?, ?, ?)')
     .run(1, "Quoted table and reserved column", "SELECT quoting works");
+  database.exec(wideTableSql("sqlite"));
   database.exec("COMMIT; ANALYZE;");
   const integrity = database.prepare("PRAGMA integrity_check").get();
   const foreignKeys = database.prepare("PRAGMA foreign_key_check").all();
@@ -201,7 +204,7 @@ try {
     throw new Error("Sample database validation failed.");
   console.log(`Created ${path}`);
   console.log(
-    "8 tables, 3 views; 375 customers, 1,200 orders, 2,400 order items, and display edge cases.",
+    "9 tables, 3 views; wide_table has 80 columns and 500 rows; 375 customers, 1,200 orders, 2,400 order items, and display edge cases.",
   );
 } finally {
   database.close();

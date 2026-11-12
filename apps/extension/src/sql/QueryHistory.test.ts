@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 const { pick, copy, config } = vi.hoisted(() => ({
   pick: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   copy: vi.fn<(text: string) => Promise<void>>(),
-  config: { enabled: true, disabled: [] as string[] },
+  config: { enabled: true, disabled: [] as string[], overrides: {} as Record<string, unknown> },
 }));
 vi.mock("vscode", () => ({
   EventEmitter: class {
@@ -42,12 +42,15 @@ vi.mock("vscode", () => ({
   },
   workspace: {
     getConfiguration: () => ({
+      inspect: (key: string) => ({ globalValue: config.overrides[key] }),
       get: (key: string, fallback: unknown) =>
-        key === "history.enabled"
-          ? config.enabled
-          : key === "history.disabledConnections"
-            ? config.disabled
-            : fallback,
+        key in config.overrides
+          ? config.overrides[key]
+          : key === "history.enabled"
+            ? config.enabled
+            : key === "history.disabledConnections"
+              ? config.disabled
+              : fallback,
     }),
   },
   window: { showQuickPick: pick, showWarningMessage: vi.fn<(text: string) => void>() },
@@ -77,6 +80,7 @@ beforeEach(() => {
   copy.mockReset();
   config.enabled = true;
   config.disabled = [];
+  config.overrides = {};
 });
 it("records counts/status, favorites entries, and restores without executing", async () => {
   const { history, update, context } = fixture();
@@ -175,4 +179,36 @@ it("adds database labels to retained entries from earlier releases", async () =>
   expect(restored.connectionInfo(restored.all()[0]!)).toEqual(info);
   history.dispose();
   restored.dispose();
+});
+
+it("expires persisted history and enforces a byte budget, including favorites", async () => {
+  config.overrides = { "history.retentionDays": 1, "history.maxStorageMiB": 1 };
+  const { context } = fixture();
+  await context.workspaceState.update("datsumi.history", [
+    {
+      id: "old",
+      connectionId: "db",
+      text: "old secret",
+      timestamp: Date.now() - 2 * 86400000,
+      durationMs: 1,
+      pinned: true,
+    },
+  ]);
+  const history = new QueryHistory(context);
+  expect(history.all()).toEqual([]);
+  for (let i = 0; i < 20; i++) history.record("db", "x".repeat(100000), 1);
+  expect(Buffer.byteLength(JSON.stringify(history.all()))).toBeLessThanOrEqual(1024 * 1024);
+});
+it("does not retain production query text unless explicitly enabled", () => {
+  const { context } = fixture();
+  const history = new QueryHistory(context, () => ({
+    connectionName: "Production",
+    driverId: "postgres",
+    environment: "production",
+  }));
+  history.record("db", "sensitive query", 1);
+  expect(history.all()).toEqual([]);
+  config.overrides["history.recordProduction"] = true;
+  history.record("db", "explicitly opted in", 1);
+  expect(history.all()).toHaveLength(1);
 });

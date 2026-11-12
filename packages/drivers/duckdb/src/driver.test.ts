@@ -110,7 +110,7 @@ describe("real DuckDB worker", () => {
       const tables = await driver.schema(session);
       const info = tables.find((item) => item.name === "shop.children")!;
       expect(info).toMatchObject({
-        editable: false,
+        editable: true,
         driverId: "duckdb",
         foreignKeys: [{ target: "shop.parents", columns: ["a", "b"], targetColumns: ["a", "b"] }],
       });
@@ -144,7 +144,7 @@ describe("real DuckDB worker", () => {
       expect(await driver.listResources(session, info.resourceId)).toHaveLength(4);
       await expect(
         driver.changeRows(session, { resourceId: info.resourceId, changes: [] }, true),
-      ).rejects.toThrow(/grid editing/);
+      ).rejects.toThrow(/Stage between/);
       const path = join(directory, "export.json");
       expect(
         await driver.exportTable(session, {
@@ -154,6 +154,71 @@ describe("real DuckDB worker", () => {
         }),
       ).toBe(2);
       expect(JSON.parse(readFileSync(path, "utf8"))).toHaveLength(2);
+    } finally {
+      await driver.disconnect(session);
+    }
+  });
+  it("stages without writes, atomically commits inserts/updates/deletes and retains drafts on conflicts", async () => {
+    const session = await driver.connect(profile, profile.configuration);
+    try {
+      await run(
+        session,
+        "CREATE TABLE edits(id INTEGER PRIMARY KEY, value DECIMAL(20,2), note VARCHAR); INSERT INTO edits VALUES(1,123.45,'a'),(2,234.56,'b')",
+      );
+      const info = (await driver.schema(session)).find((table) => table.name === "main.edits")!;
+      const request = {
+        resourceId: info.resourceId,
+        changes: [
+          {
+            kind: "update" as const,
+            original: { id: 1, value: "123.45", note: "a" },
+            values: { value: "456.78" },
+          },
+          {
+            kind: "update" as const,
+            original: { id: 2, value: "234.56", note: "stale" },
+            values: { note: "changed" },
+          },
+        ],
+      };
+      expect(await driver.changeRows(session, request, false)).toHaveLength(2);
+      expect(await run(session, "SELECT value FROM edits WHERE id=1")).toMatchObject({
+        rows: [["123.45"]],
+      });
+      await expect(driver.changeRows(session, request, true)).rejects.toThrow("Edit conflict");
+      expect(await run(session, "SELECT value FROM edits WHERE id=1")).toMatchObject({
+        rows: [["123.45"]],
+      });
+      request.changes[1]!.original.note = "b";
+      await driver.changeRows(session, request, true);
+      expect(await run(session, "SELECT value,note FROM edits ORDER BY id")).toMatchObject({
+        rows: [
+          ["456.78", "a"],
+          ["234.56", "changed"],
+        ],
+      });
+      await driver.changeRows(
+        session,
+        {
+          resourceId: info.resourceId,
+          changes: [{ kind: "insert", values: { id: 3, note: "new" } }],
+        },
+        true,
+      );
+      await driver.changeRows(
+        session,
+        {
+          resourceId: info.resourceId,
+          changes: [{ kind: "delete", values: {}, original: { id: 3, value: null, note: "new" } }],
+        },
+        true,
+      );
+      await run(session, "BEGIN");
+      await expect(driver.changeRows(session, request, true)).rejects.toThrow(
+        "open SQL transaction",
+      );
+      expect(await driver.transactionState(session)).toBe("open");
+      await run(session, "ROLLBACK");
     } finally {
       await driver.disconnect(session);
     }
@@ -181,6 +246,20 @@ describe("real DuckDB worker", () => {
         rows: [[1, "original"]],
       });
       await expect(run(session, "DELETE FROM entries")).rejects.toThrow(/read.only/i);
+      const info = (await driver.schema(session)).find((table) => table.name === "main.entries")!;
+      expect(info.editable).toBe(false);
+      await expect(
+        driver.changeRows(
+          session,
+          {
+            resourceId: info.resourceId,
+            changes: [
+              { kind: "update", original: { id: 1, value: "original" }, values: { value: "bad" } },
+            ],
+          },
+          true,
+        ),
+      ).rejects.toThrow("writable");
     } finally {
       await driver.disconnect(session);
     }

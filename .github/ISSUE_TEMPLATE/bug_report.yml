@@ -1,0 +1,20 @@
+name: Bug report
+description: Report a reproducible Datsumi bug using synthetic data.
+body:
+  - type: markdown
+    attributes:
+      value: "Never include credentials, private keys, customer data or sensitive SQL. Security reports belong in SECURITY.md's private channel."
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics and engine version
+      description: Use Datsumi → Copy Redacted Connection Diagnostics; include the server version separately.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include synthetic schema/query, steps, expected behavior and actual behavior.
+    validations:
+      required: true

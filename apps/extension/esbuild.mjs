@@ -1,12 +1,28 @@
 /* oxlint-disable no-await-in-loop -- Copy release notices as part of the ordered packaging pipeline. */
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { build, context } from "esbuild";
 import { build as buildWebview } from "vite";
 
+import { writeLicenses } from "../../scripts/licenses.mjs";
+
 await import("../../packages/drivers/sql/build.mjs");
 await mkdir("dist/drivers", { recursive: true });
+await copyFile("../../LICENSE", "LICENSE");
+const duckRequire = createRequire(
+  new URL("../../packages/drivers/duckdb/package.json", import.meta.url),
+);
+const apiRequire = createRequire(duckRequire.resolve("@duckdb/node-api"));
+const bindingRequire = createRequire(apiRequire.resolve("@duckdb/node-bindings"));
+await writeLicenses(
+  [
+    apiRequire.resolve("@duckdb/node-bindings"),
+    bindingRequire.resolve(`@duckdb/node-bindings-${process.platform}-${process.arch}/duckdb.node`),
+  ],
+  "dist/NATIVE",
+);
 await writeFile(
   "dist/CODICONS.NOTICES.txt",
   "VS Code Codicons 0.0.45 — Microsoft Corporation\nhttps://github.com/microsoft/vscode-codicons\nIcons used without modification; CC BY 4.0.\n\n" +
@@ -35,6 +51,7 @@ for (const id of [
   "duckdb",
 ]) {
   await copyFile(`../../dist/drivers/${id}.NOTICES.txt`, `dist/${id}.NOTICES.txt`);
+  await copyFile(`../../dist/drivers/${id}.components.json`, `dist/${id}.components.json`);
   await copyFile(`../../dist/drivers/${id}.cjs`, `dist/drivers/${id}.cjs`);
 }
 const webviewRoot = fileURLToPath(new URL("../webview/", import.meta.url));
@@ -71,26 +88,7 @@ const options = {
 
 if (!watch) {
   const result = await build(options);
-  const notices = [],
-    seen = new Set();
-  for (const input of Object.keys(result.metafile.inputs)) {
-    const match = input.match(/^(.*node_modules\/((?:@[^/]+\/)?[^/]+))\//);
-    if (!match || seen.has(match[1])) continue;
-    seen.add(match[1]);
-    for (const name of [
-      "LICENSE",
-      "LICENSE.md",
-      "LICENSE.txt",
-      "license",
-      "COPYING",
-      "COPYING.LESSER",
-    ]) {
-      try {
-        notices.push(`${match[2]}\n${await readFile(`${match[1]}/${name}`, "utf8")}`);
-      } catch {}
-    }
-  }
-  await writeFile("dist/CORE.NOTICES.txt", notices.join("\n\n---\n\n"));
+  await writeLicenses(Object.keys(result.metafile.inputs), "dist/CORE", process.cwd());
 } else {
   const buildContext = await context(options);
   await buildContext.watch();

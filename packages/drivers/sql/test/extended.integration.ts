@@ -79,10 +79,10 @@ for (const id of ["clickhouse", "oracle"] as const) {
       expect(empty.kind === "table" && empty.columns.length).toBe(4);
       expect(empty.kind === "table" && empty.rows).toEqual([]);
     });
-    it("discovers metadata, safely filters/sorts/pages and disables staged writes", async () => {
+    it("discovers metadata, safely filters/sorts/pages and reports editing capabilities", async () => {
       const info = (await driver.schema(session)).find((item) => item.name.endsWith(".fixture"))!;
       expect(info).toBeDefined();
-      expect(info.editable).toBe(false);
+      expect(info.editable).toBe(id === "oracle");
       expect(info.columns.map((column) => column.name)).toEqual(["id", "name", "amount", "note"]);
       if (id === "oracle")
         expect(
@@ -141,9 +141,10 @@ for (const id of ["clickhouse", "oracle"] as const) {
           order: { column: "bad", direction: "asc" },
         }),
       ).rejects.toThrow("sort");
-      await expect(
-        driver.changeRows(session, { resourceId: info.resourceId, changes: [] }, true),
-      ).rejects.toThrow("Editing requires");
+      if (id === "clickhouse")
+        await expect(
+          driver.changeRows(session, { resourceId: info.resourceId, changes: [] }, true),
+        ).rejects.toThrow("cannot roll back");
       if (id === "oracle")
         expect(
           await driver.readCell(session, {
@@ -153,6 +154,71 @@ for (const id of ["clickhouse", "oracle"] as const) {
           }),
         ).toBe("note");
     });
+    it.skipIf(id !== "oracle")(
+      "reviews and atomically commits CLOB-backed edits, preserving an existing transaction",
+      async () => {
+        const info = (await driver.schema(session)).find((item) => item.name.endsWith(".fixture"))!;
+        const page = await driver.browseTable(session, {
+          resourceId: info.resourceId,
+          offset: 0,
+          limit: 10,
+        });
+        const changes = page.result.rows.map((row) => ({
+          kind: "update" as const,
+          original: Object.fromEntries(page.result.columns.map((name, i) => [name, row[i]!])),
+          values: { name: "edited" },
+        }));
+        const request = { resourceId: info.resourceId, changes };
+        await driver.changeRows(session, request, false);
+        expect(
+          (await driver.browseTable(session, { resourceId: info.resourceId, offset: 0, limit: 10 }))
+            .result.rows,
+        ).toEqual(page.result.rows);
+        await expect(
+          driver.changeRows(
+            session,
+            {
+              ...request,
+              changes: [
+                changes[0]!,
+                { ...changes[1]!, original: { ...changes[1]!.original, name: "stale" } },
+              ],
+            },
+            true,
+          ),
+        ).rejects.toThrow("Edit conflict");
+        expect(
+          (await driver.browseTable(session, { resourceId: info.resourceId, offset: 0, limit: 10 }))
+            .result.rows,
+        ).toEqual(page.result.rows);
+        await driver.changeRows(session, request, true);
+        expect(await driver.transactionState(session)).toBe("idle");
+        const edited = await driver.browseTable(session, {
+          resourceId: info.resourceId,
+          offset: 0,
+          limit: 10,
+        });
+        expect(edited.result.rows.map((row) => row[1])).toEqual(["edited", "edited"]);
+        await query(`UPDATE ${table} SET "name"='first' WHERE "id"=1`);
+        const original = { ...changes[0]!.original, name: "first" };
+        await driver.changeRows(
+          session,
+          {
+            resourceId: info.resourceId,
+            changes: [{ kind: "update", original, values: { name: "nested" } }],
+          },
+          true,
+        );
+        expect(await driver.transactionState(session)).toBe("open");
+        await query("ROLLBACK");
+        expect(
+          (await driver.browseTable(session, { resourceId: info.resourceId, offset: 0, limit: 10 }))
+            .result.rows[0]?.[1],
+        ).toBe("edited");
+        await query(`UPDATE ${table} SET "name"=CASE "id" WHEN 1 THEN 'first' ELSE 'second' END`);
+        await query("COMMIT");
+      },
+    );
     it("exports filtered table contents atomically", async () => {
       const directory = await mkdtemp(join(tmpdir(), "datsumi-extended-"));
       try {
@@ -292,6 +358,39 @@ for (const id of ["clickhouse", "oracle"] as const) {
             column: "moment",
           }),
         ).toBe(expected[1]);
+        const original = Object.fromEntries(
+          page.result.columns.map((name, i) => [name, page.result.rows[0]![i]!]),
+        );
+        await driver.changeRows(
+          session,
+          {
+            resourceId: info.resourceId,
+            changes: [
+              { kind: "update", original, values: { moment: "2026-02-01T12:34:56.987654321" } },
+            ],
+          },
+          true,
+        );
+        const edited = await driver.browseTable(session, {
+          resourceId: info.resourceId,
+          offset: 0,
+          limit: 10,
+        });
+        expect(edited.result.rows[0]?.[1]).toBe("2026-02-01T12:34:56.987654321");
+        await driver.changeRows(
+          session,
+          {
+            resourceId: info.resourceId,
+            changes: [
+              {
+                kind: "update",
+                original: { ...original, moment: "2026-02-01T12:34:56.987654321" },
+                values: { moment: expected[1]! },
+              },
+            ],
+          },
+          true,
+        );
         const directory = await mkdtemp(join(tmpdir(), "datsumi-oracle-time-"));
         try {
           const path = join(directory, "times.json");

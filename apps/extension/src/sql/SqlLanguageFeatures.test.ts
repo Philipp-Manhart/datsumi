@@ -6,6 +6,7 @@ import type * as vscode from "vscode";
 import type { ConnectionManager } from "../connections/ConnectionManager";
 const native = vi.hoisted(() => ({ editor: undefined as vscode.TextEditor | undefined }));
 vi.mock("vscode", () => ({
+  workspace: { getConfiguration: () => ({ get: (_key: string, fallback: unknown) => fallback }) },
   languages: { createDiagnosticCollection: () => ({ dispose() {} }) },
   window: {
     get activeTextEditor() {

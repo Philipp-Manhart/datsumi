@@ -1,5 +1,17 @@
 # Sample databases
 
+## Wide table for grid testing
+
+Both local SQL samples include **80 columns and 500 rows** in `wide_table` (SQLite) and `demo.wide_table` (DuckDB). To add this table to existing sample files without resetting their other tables, run:
+
+```sh
+bun run sample:wide
+```
+
+Disconnect DuckDB first if it is open in Datsumi or another client. Use `--sqlite` or `--duckdb` to update just one sample. Existing wide tables and edits are preserved when rerunning this command. Newly generated SQLite/DuckDB samples include the table automatically.
+
+Refresh the connection tree, open the table, and scroll horizontally to the last column, `segment_10`. The data includes numbers, dates, booleans, categories, Unicode, quotes, nulls, empty text, tabs and line breaks. Try resizing/reordering/hiding columns, sorting a far-right column, changing page size and copying all 500 rows into Excel. The query files begin with an unrestricted `SELECT *` so query-result pagination can also be exercised.
+
 ## MongoDB and Redis playgrounds
 
 Start both local services and create their sample data:
@@ -49,7 +61,7 @@ If a sample port is occupied, set `DATSUMI_SAMPLE_MONGO_PORT` and/or `DATSUMI_SA
 
 Open **playground.duckdb** through **Datsumi: Add Database Connection → DuckDB → Open existing database**. Open **duckdb-queries.sql**, choose the DuckDB connection in the status bar, and run statements with Ctrl+Enter / Cmd+Enter.
 
-The disposable database contains 9 tables and 3 views across `demo` and `analytics`: 375 customers, 32 products, 1,200 orders, 2,400 order items, customer tags, quoted column/table names, an empty table, exact HUGEINT/DECIMAL values, blobs, Unicode, nested STRUCT/LIST values, and 10,000 analytics events. Foreign keys populate the relationship diagram; order/event tables support paging, filters and sorting. DuckDB grid editing remains disabled; the query file includes an SQL UPDATE followed by ROLLBACK.
+The disposable database contains 10 tables and 3 views across `demo` and `analytics`: 375 customers, 32 products, 1,200 orders, 2,400 order items, customer tags, quoted column/table names, an empty table, exact HUGEINT/DECIMAL values, blobs, Unicode, nested STRUCT/LIST values, and 10,000 analytics events. Foreign keys populate the relationship diagram; order/event tables support paging, filters and sorting. DuckDB grid editing remains disabled; the query file includes an SQL UPDATE followed by ROLLBACK.
 
 Create the sample with `bun run sample:duckdb`. If it already exists, disconnect it and run `bun run sample:duckdb --reset`. Reset acquires DuckDB's file lock and recreates only the `demo` and `analytics` sample schemas, without unlinking an open database. Counts and foreign-key links are checked before reporting success. The generator requires the repository dependencies (`bun install`) and uses the pinned official DuckDB Node client.
 

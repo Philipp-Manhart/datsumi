@@ -1,0 +1,36 @@
+"""Verify the exact distributable, not just build directories. No external Python packages."""
+import hashlib
+import json
+from pathlib import Path
+import re
+import sys
+import zipfile
+
+path = Path(sys.argv[1])
+with zipfile.ZipFile(path) as archive:
+    names = archive.namelist()
+    manifest = json.loads(archive.read('extension/package.json'))
+    assert manifest['license'] == 'MIT', 'Project license must be MIT'
+    license_file = next(name for name in names if re.fullmatch(r'extension/licen[sc]e(?:\.(?:txt|md))?', name, re.I))
+    assert b'Permission is hereby granted' in archive.read(license_file)
+    assert archive.read('extension/' + manifest['icon']).startswith(b'\x89PNG\r\n\x1a\n')
+    assert not any(re.search(r'(?:/(?:src|test|node_modules)/|\.(?:pem|key|sqlite|duckdb|map)$|/\.env(?:\.|$))', name) for name in names), 'Unexpected source/private artifact in VSIX'
+    catalog = json.loads(archive.read('extension/dist/driver-catalog.json'))
+    for artifact in catalog:
+        payload = archive.read('extension/dist/drivers/' + artifact['file'])
+        assert len(payload) == artifact['bytes']
+        assert hashlib.sha256(payload).hexdigest() == artifact['sha256']
+    inventories = [name for name in names if name.endswith('.components.json')]
+    assert len(inventories) >= len(catalog) + 3, 'Missing core/webview/native license inventory'
+    components = set()
+    for inventory in inventories:
+        notices = archive.read(inventory.replace('.components.json', '.NOTICES.txt')).decode()
+        for item in json.loads(archive.read(inventory)):
+            assert item['license'] not in ('UNLICENSED', 'UNKNOWN', ''), item
+            assert item['name'] + '@' + item['version'] in notices, item
+            components.add(item['name'])
+    assert {'react', 'react-dom', 'scheduler', 'tailwindcss', '@vscode/codicons'} <= components
+    assert 'mariadb' not in components, 'LGPL MariaDB transport must not be bundled'
+sha = hashlib.sha256(path.read_bytes()).hexdigest()
+path.with_suffix(path.suffix + '.sha256').write_text(sha + '  ' + path.name + '\n')
+print(json.dumps({'file':str(path),'version':manifest['version'],'sha256':sha,'components':len(components),'checks':'passed'}))

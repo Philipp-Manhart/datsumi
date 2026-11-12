@@ -2,6 +2,7 @@
   "name": "@datsumi/driver-sql",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +18,6 @@
     "@datsumi/driver-api": "workspace:*",
     "@libsql/client": "0.18.0",
     "@tursodatabase/serverless": "1.4.1",
-    "mariadb": "3.5.4",
     "mysql2": "3.24.6",
     "oracledb": "26.0.0",
     "pg": "8.23.1",

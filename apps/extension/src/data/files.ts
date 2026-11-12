@@ -31,7 +31,16 @@ export async function saveResult(
     if (!choice) return;
   }
   const file = await exportPath(title, format);
-  if (file) await writeFile(file, serializeResult(result, format), "utf8");
+  if (file)
+    await writeFile(
+      file,
+      serializeResult(
+        result,
+        format,
+        vscode.workspace.getConfiguration("datsumi").get("export.spreadsheetSafe", false),
+      ),
+      { encoding: "utf8", mode: 0o600 },
+    );
 }
 export async function exportPath(
   title: string,

@@ -90,6 +90,14 @@ export class SqlLanguageFeatures
       document.eol === vscode.EndOfLine.CRLF ? "\r\n" : "\n",
       this.connections.all().find((profile) => profile.id === this.selectedConnection(document))
         ?.driverId ?? "sqlite",
+      {
+        keywordCase: vscode.workspace
+          .getConfiguration("datsumi")
+          .get("sql.format.keywordCase", "upper"),
+        linesBetweenQueries: vscode.workspace
+          .getConfiguration("datsumi")
+          .get("sql.format.linesBetweenQueries", 1),
+      },
     );
     return formatted === text ? [] : [vscode.TextEdit.replace(range, formatted)];
   }
@@ -119,6 +127,8 @@ export class SqlLanguageFeatures
     position: vscode.Position,
     token: vscode.CancellationToken,
   ): Promise<vscode.CompletionList> {
+    if (!vscode.workspace.getConfiguration("datsumi").get("sql.completion.enabled", true))
+      return new vscode.CompletionList([]);
     const text = document.getText();
     const context = sqlContext(text, document.offsetAt(position));
     if (context.suppressed || token.isCancellationRequested) return new vscode.CompletionList([]);

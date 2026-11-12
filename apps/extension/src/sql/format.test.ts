@@ -69,3 +69,15 @@ it("formats Oracle and ClickHouse using their dialects", () => {
     ),
   ).toContain("PREWHERE");
 });
+
+it("honors SQL keyword casing preferences without changing string literals", () => {
+  const formatted = formatSql(
+    "SELECT 'UPPER' AS label FROM customers",
+    { tabSize: 2, insertSpaces: true },
+    "\n",
+    "sqlite",
+    { keywordCase: "lower" },
+  );
+  expect(formatted).toContain("select");
+  expect(formatted).toContain("'UPPER'");
+});

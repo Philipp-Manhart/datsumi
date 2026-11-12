@@ -1,17 +1,24 @@
 {
   "name": "datsumi",
-  "displayName": "Datsumi",
-  "version": "0.1.0",
+  "displayName": "Datsumi — Database Explorer",
+  "version": "0.2.0",
   "private": true,
-  "description": "Native SQL, DuckDB, MongoDB and Redis client with reviewed edits, JSON inspection and query history.",
+  "description": "A modern, unified database client for VS Code. Explore, query, and manage SQL and NoSQL databases without leaving your editor.",
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "database",
+    "nosql",
+    "postgresql",
+    "sql",
+    "sqlite"
   ],
   "homepage": "https://github.com/Philipp-Manhart/datsumi#readme",
   "bugs": {
     "url": "https://github.com/Philipp-Manhart/datsumi/issues"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Philipp-Manhart/datsumi.git",
@@ -55,14 +62,14 @@
         {
           "id": "datsumi",
           "title": "Datsumi",
-          "icon": "./resources/database.svg"
+          "icon": "./resources/datsumi-activity.svg"
         }
       ],
       "panel": [
         {
           "id": "datsumi-resultsPanel",
           "title": "Query Results",
-          "icon": "./resources/database.svg"
+          "icon": "./resources/datsumi-activity.svg"
         }
       ]
     },
@@ -71,13 +78,13 @@
         {
           "id": "datsumi.connections",
           "name": "Datsumi Connections",
-          "icon": "./resources/database.svg"
+          "icon": "./resources/datsumi-activity.svg"
         },
         {
           "id": "datsumi.history",
           "name": "Query History",
           "visibility": "collapsed",
-          "icon": "./resources/database.svg"
+          "icon": "./resources/datsumi-activity.svg"
         }
       ],
       "datsumi-resultsPanel": [
@@ -85,7 +92,7 @@
           "type": "webview",
           "id": "datsumi.queryResults",
           "name": "Query Results",
-          "icon": "./resources/database.svg"
+          "icon": "./resources/datsumi-activity.svg"
         }
       ]
     },
@@ -294,6 +301,31 @@
         "command": "datsumi.forgetSshHostKey",
         "title": "Forget SSH Host Key",
         "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.backupSqlite",
+        "title": "Back Up SQLite Database…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.editConnection",
+        "title": "Edit Connection…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.duplicateConnection",
+        "title": "Duplicate Connection…",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.copyDiagnostics",
+        "title": "Copy Redacted Connection Diagnostics",
+        "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.clearDrafts",
+        "title": "Clear Saved Edit Drafts",
+        "category": "Datsumi"
       }
     ],
     "menus": {
@@ -327,12 +359,12 @@
       "view/item/context": [
         {
           "command": "datsumi.newQuery",
-          "when": "view == datsumi.connections && viewItem =~ /^(connection|table|view)$/",
+          "when": "view == datsumi.connections && viewItem =~ /^(connection(\\.sqlite)?|table|view)$/",
           "group": "inline@1"
         },
         {
           "command": "datsumi.selectConnection",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "connection@1"
         },
         {
@@ -342,22 +374,22 @@
         },
         {
           "command": "datsumi.disconnect",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "connection@2"
         },
         {
           "command": "datsumi.removeConnection",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "connection@3"
         },
         {
           "command": "datsumi.showRelationships",
-          "when": "view == datsumi.connections && viewItem =~ /^(connection|table|view)$/",
+          "when": "view == datsumi.connections && viewItem =~ /^(connection(\\.sqlite)?|table|view)$/",
           "group": "navigation@2"
         },
         {
           "command": "datsumi.filterObjects",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "navigation@8"
         },
         {
@@ -367,12 +399,12 @@
         },
         {
           "command": "datsumi.showHistory",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "navigation@3"
         },
         {
           "submenu": "datsumi.connectionSettings",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "connection@4"
         },
         {
@@ -389,6 +421,26 @@
           "command": "datsumi.deleteHistory",
           "when": "view == datsumi.history && viewItem == historyEntry",
           "group": "history"
+        },
+        {
+          "command": "datsumi.backupSqlite",
+          "when": "view == datsumi.connections && viewItem == connection.sqlite",
+          "group": "datsumi@9"
+        },
+        {
+          "command": "datsumi.editConnection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
+          "group": "connection@2"
+        },
+        {
+          "command": "datsumi.duplicateConnection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
+          "group": "connection@2"
+        },
+        {
+          "command": "datsumi.copyDiagnostics",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
+          "group": "connection@2"
         }
       ],
       "editor/title": [
@@ -497,22 +549,22 @@
       "datsumi.connectionSettings": [
         {
           "command": "datsumi.changeCredentials",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "credentials"
         },
         {
           "command": "datsumi.forgetCredentials",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "credentials"
         },
         {
           "command": "datsumi.setEnvironment",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "navigation@8"
         },
         {
           "command": "datsumi.toggleHistory",
-          "when": "view == datsumi.connections && viewItem == connection",
+          "when": "view == datsumi.connections && viewItem =~ /^connection(\\.sqlite)?$/",
           "group": "navigation@9"
         }
       ]
@@ -554,42 +606,173 @@
         "when": "editorTextFocus && editorLangId == sql"
       }
     ],
-    "configuration": {
-      "title": "Datsumi",
-      "properties": {
-        "datsumi.history.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Store the last 200 executed SQL statements locally in this workspace. SQL may contain sensitive values. Use Clear Query History to remove stored entries."
-        },
-        "datsumi.drivers.downloadBaseUrl": {
-          "type": "string",
-          "default": "",
-          "scope": "application",
-          "markdownDescription": "HTTPS release directory for optional driver artifacts matching this extension’s pinned catalog. Set in User Settings; workspace overrides are ignored. Leave empty to install driver files offline."
-        },
-        "datsumi.history.limit": {
-          "type": "number",
-          "default": 200,
-          "minimum": 10,
-          "maximum": 2000,
-          "description": "Number of recent executed statements to retain locally (favorites are retained separately)."
-        },
-        "datsumi.history.disabledConnections": {
-          "type": "array",
-          "items": {
-            "type": "string"
+    "configuration": [
+      {
+        "title": "Datsumi: Results",
+        "order": 0,
+        "properties": {
+          "datsumi.results.reuseTabs": {
+            "type": "boolean",
+            "default": true,
+            "description": "Reuse the active unpinned result tab when running another query on the same connection. Pinned results are preserved. Run Query in New Result always creates a separate tab."
           },
-          "default": [],
-          "description": "Connection IDs for which SQL/query history is disabled."
-        },
-        "datsumi.results.reuseTabs": {
-          "type": "boolean",
-          "default": true,
-          "description": "Reuse the active unpinned result tab when running another query on the same connection. Pinned results are preserved. Run Query in New Result always creates a separate tab."
+          "datsumi.results.defaultPageSize": {
+            "type": "integer",
+            "default": 100,
+            "markdownDescription": "Rows shown on new table/result pages. Saved per-table page sizes take precedence. Copy all still includes the entire available result.",
+            "minimum": 25,
+            "maximum": 500
+          },
+          "datsumi.results.density": {
+            "type": "string",
+            "default": "comfortable",
+            "markdownDescription": "Spacing of result grid cells. Uses VS Code fonts and theme colors.",
+            "enum": [
+              "comfortable",
+              "compact"
+            ]
+          },
+          "datsumi.results.showDataTypes": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show database types below column names. Types are never included in copied data."
+          },
+          "datsumi.results.nullDisplay": {
+            "type": "string",
+            "default": "NULL",
+            "markdownDescription": "Label for SQL NULL cells. Display only; copied NULL values remain empty fields.",
+            "maxLength": 24
+          }
+        }
+      },
+      {
+        "title": "Datsumi: SQL Editor",
+        "order": 1,
+        "properties": {
+          "datsumi.sql.format.keywordCase": {
+            "type": "string",
+            "default": "upper",
+            "markdownDescription": "Letter case for SQL keywords when formatting.",
+            "enum": [
+              "upper",
+              "lower",
+              "preserve"
+            ]
+          },
+          "datsumi.sql.format.linesBetweenQueries": {
+            "type": "integer",
+            "default": 1,
+            "markdownDescription": "Blank lines between formatted statements.",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "datsumi.sql.completion.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable Datsumi SQL keywords and schema completion. Other extensions may still provide suggestions."
+          }
+        }
+      },
+      {
+        "title": "Datsumi: History & Privacy",
+        "order": 2,
+        "properties": {
+          "datsumi.history.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Store executed query text locally in this workspace. Text may contain sensitive values; history can expire and is bounded by count and size settings. Use Clear Query History to delete it."
+          },
+          "datsumi.history.limit": {
+            "type": "number",
+            "default": 200,
+            "minimum": 10,
+            "maximum": 2000,
+            "description": "Number of recent executed statements to retain locally (favorites are retained separately)."
+          },
+          "datsumi.history.disabledConnections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Connection IDs for which SQL/query history is disabled."
+          },
+          "datsumi.history.retentionDays": {
+            "type": "integer",
+            "default": 30,
+            "markdownDescription": "Automatically remove history older than this many days, including favorites. Use 0 to keep entries until count/size limits or manual deletion.",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "datsumi.history.maxStorageMiB": {
+            "type": "integer",
+            "default": 5,
+            "markdownDescription": "Maximum serialized workspace history size, including favorites. Old entries are pruned to stay within this budget.",
+            "minimum": 1,
+            "maximum": 25
+          },
+          "datsumi.history.recordProduction": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Record queries from connections labeled production. History contains unencrypted query text and errors; enable only intentionally.",
+            "scope": "application"
+          },
+          "datsumi.drafts.recoveryEnabled": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Keep pending SQL table edits locally for optional recovery after closing/reloading. Values may be sensitive and are not encrypted. Recovery never executes writes automatically.",
+            "scope": "application"
+          },
+          "datsumi.drafts.retentionDays": {
+            "type": "integer",
+            "default": 7,
+            "markdownDescription": "Delete stored edit drafts older than this many days.",
+            "minimum": 1,
+            "maximum": 30
+          }
+        }
+      },
+      {
+        "title": "Datsumi: Connections",
+        "order": 3,
+        "properties": {
+          "datsumi.connections.defaultCredentialMode": {
+            "type": "string",
+            "default": "session",
+            "markdownDescription": "Initial credential storage choice in new connection forms. Saved credentials use VS Code SecretStorage; copied/edited profiles never inherit secrets.",
+            "enum": [
+              "session",
+              "ask",
+              "save"
+            ],
+            "scope": "application"
+          }
+        }
+      },
+      {
+        "title": "Datsumi: Export",
+        "order": 4,
+        "properties": {
+          "datsumi.export.spreadsheetSafe": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Neutralize formula-like text in CSV exports by prefixing an apostrophe. Exact grid copy and JSON remain unchanged."
+          }
+        }
+      },
+      {
+        "title": "Datsumi: Advanced",
+        "order": 5,
+        "properties": {
+          "datsumi.drivers.downloadBaseUrl": {
+            "type": "string",
+            "default": "",
+            "scope": "application",
+            "markdownDescription": "HTTPS release directory for optional driver artifacts matching this extension’s pinned catalog. Set in User Settings; workspace overrides are ignored. Leave empty to install driver files offline."
+          }
         }
       }
-    },
+    ],
     "configurationDefaults": {
       "[sql]": {
         "editor.defaultFormatter": "philipp-manhart.datsumi",
@@ -624,6 +807,7 @@
   "extensionKind": [
     "workspace"
   ],
+  "icon": "resources/datsumi.png",
   "engines": {
     "vscode": "^1.138.0"
   },

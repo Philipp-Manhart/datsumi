@@ -31,6 +31,7 @@ export interface ServerConfiguration {
   username: string;
   tls: "verify" | "disable";
   ca: string;
+  /** Disable staged grid writes only; editor SQL retains database-account permissions. */
   readOnly: boolean;
   channelBindingRequired?: boolean;
   enableChannelBinding?: boolean;

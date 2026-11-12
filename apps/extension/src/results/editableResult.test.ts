@@ -82,6 +82,64 @@ describe("safe editing of captured SELECT results", () => {
       ).info,
     ).toBeUndefined();
   });
+  it.each(["postgres", "mysql", "mariadb", "mssql", "oracle", "duckdb", "libsql", "turso"])(
+    "allows safe %s SELECT * captures without assuming column origins",
+    (driverId) => {
+      const serverInfo = { ...info, name: "main.customers", schema: "main", driverId };
+      const capture = {
+        ...result,
+        columnMetadata: result.columns.map((name) => ({ name, dataType: "TEXT" })),
+      };
+      expect(
+        editableResult('SELECT * FROM "main"."customers" WHERE id=1;', capture, [serverInfo]).info,
+      ).toBe(serverInfo);
+      for (const query of [
+        "SELECT name AS id,id AS name FROM main.customers",
+        "SELECT * FROM main.customers c JOIN other o ON c.id=o.id",
+        "SELECT * FROM main.customers UNION SELECT * FROM other",
+        "SELECT * FROM main.customers()",
+        "SELECT * FROM (VALUES(1,'fake')) customers",
+        "SELECT * FROM main.customers; UPDATE main.customers SET name='changed'",
+      ])
+        expect(editableResult(query, capture, [serverInfo]).info).toBeUndefined();
+      expect(
+        editableResult("SELECT * FROM customers", capture, [
+          serverInfo,
+          { ...serverInfo, name: "other.customers", schema: "other" },
+        ]).info,
+      ).toBeUndefined();
+      expect(
+        editableResult("SELECT * FROM main.customers", capture, [
+          { ...serverInfo, editable: false },
+        ]).info,
+      ).toBeUndefined();
+    },
+  );
+  it("refreshes server captures using bound primary-key filters rather than SQLite SQL", async () => {
+    const server = { ...info, driverId: "libsql", name: "main.customers" };
+    const execute = vi.fn<Parameters<typeof refreshedChanges>[2]>();
+    const browse = vi.fn<NonNullable<Parameters<typeof refreshedChanges>[3]>>(async () => ({
+      offset: 0,
+      limit: 2,
+      hasMore: false,
+      result: { ...result, rows: [[2, "changed"]] },
+    }));
+    const changes = [
+      {
+        kind: "update" as const,
+        original: { id: 1, name: "Alex" },
+        values: { id: 2, name: "changed" },
+      },
+    ];
+    expect(await refreshedChanges(server, changes, execute, browse)).toEqual([[2, "changed"]]);
+    expect(execute).not.toHaveBeenCalled();
+    expect(browse).toHaveBeenCalledWith({
+      resourceId: info.resourceId,
+      offset: 0,
+      limit: 2,
+      filters: [{ column: "id", operator: "=", value: 2 }],
+    });
+  });
   it("refreshes only changed keys and patches the capture without re-running the query", async () => {
     const changes = [
       {

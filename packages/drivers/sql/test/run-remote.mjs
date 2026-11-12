@@ -1,37 +1,31 @@
 // An isolated real libSQL server exercises both official HTTP clients. No cloud account required.
 import { spawn, execFileSync } from "node:child_process";
-import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { mkdir, mkdtemp, writeFile, rm, access } from "node:fs/promises";
+import { generateKeyPairSync, sign } from "node:crypto";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
+import { verifiedDownload } from "../../../../scripts/verified-download.mjs";
 const version = "0.24.32";
 const checksum = "71720fc8648c19efef416efebd47145ef59b62e198770533530a858e1336879f";
+const dir = await mkdtemp(join(tmpdir(), "datsumi-remote-test-"));
 let binary = process.env.DATSUMI_TEST_SQLD_BIN;
 if (!binary) {
   if (process.platform !== "linux" || process.arch !== "x64")
     throw new Error(
-      "Set DATSUMI_TEST_SQLD_BIN to a libsql-server v0.24.32 sqld executable on this platform.",
+      "Set DATSUMI_TEST_SQLD_BIN to a trusted libSQL server 0.24.32 executable on this platform.",
     );
-  const cache = join(tmpdir(), `datsumi-libsql-${version}`);
-  await mkdir(cache, { recursive: true });
-  binary = join(cache, "libsql-server-x86_64-unknown-linux-gnu/sqld");
-  try {
-    await access(binary);
-  } catch {
-    const response = await fetch(
-      `https://github.com/tursodatabase/libsql/releases/download/libsql-server-v${version}/libsql-server-x86_64-unknown-linux-gnu.tar.xz`,
-    );
-    if (!response.ok) throw new Error(`Test server download failed: ${response.status}`);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (createHash("sha256").update(bytes).digest("hex") !== checksum)
-      throw new Error("Test server checksum mismatch.");
-    const archive = join(cache, "server.tar.xz");
-    await writeFile(archive, bytes);
-    execFileSync("tar", ["-xJf", archive, "-C", cache]);
-  }
+  const bytes = await verifiedDownload({
+    url: `https://github.com/tursodatabase/libsql/releases/download/libsql-server-v${version}/libsql-server-x86_64-unknown-linux-gnu.tar.xz`,
+    sha256: checksum,
+    maxBytes: 128 * 1024 * 1024,
+  });
+  const archive = join(dir, "server.tar.xz");
+  await writeFile(archive, bytes, { mode: 0o600 });
+  execFileSync("tar", ["-xJf", archive, "-C", dir]);
+  binary = join(dir, "libsql-server-x86_64-unknown-linux-gnu/sqld");
 }
-const dir = await mkdtemp(join(tmpdir(), "datsumi-remote-test-"));
 const listener = createServer();
 await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
 const port = listener.address().port;

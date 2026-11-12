@@ -1,0 +1,15 @@
+name: Feature request
+description: Suggest a focused improvement to the database workflow.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What task is difficult today?
+      description: Describe the user problem and database type without private data.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Smallest useful improvement
+      description: Include alternatives or existing VS Code features that could help.

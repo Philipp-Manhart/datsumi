@@ -1,44 +1,16 @@
 /* oxlint-disable react-perf/jsx-no-new-function-as-prop, react-perf/jsx-no-new-object-as-prop -- Native DOM handlers and layout styles carry row-specific values; memoizing them adds no child-render benefit. */
-import { clipboardTsv, formatJson } from "@datsumi/core";
+import { clipboardTsv } from "@datsumi/core";
 import type { CellValue, WebviewRequest, WebviewResponse } from "@datsumi/protocol";
 /* oxlint-disable react/no-array-index-key -- Query rows and duplicate column names have positional identity. */
 import { useEffect, useRef, useState, useCallback } from "react";
 
 import { ActionMenu } from "./ActionMenu";
 import { columnSize } from "./columnSize";
+import { cellText, objectRow, isJson, pretty } from "./gridValues";
 import { Icon } from "./Icon";
 import { JsonInspector } from "./JsonInspector";
 type Table = Extract<NonNullable<WebviewResponse["result"]>, { kind: "table" }>;
 type Change = NonNullable<WebviewResponse["staged"]>[number];
-function cellText(value: CellValue): string {
-  if (value === null) return "NULL";
-  if (typeof value !== "object") return String(value);
-  if (value.type === "blob")
-    return `BLOB · ${value.bytes} bytes · hex ${value.hex}${value.hex.length < value.bytes * 2 ? "… (preview)" : ""}`;
-  if (value.type === "text") return `${value.value}… (preview of ${value.length} characters)`;
-  return value.value;
-}
-const objectRow = (table: Table, row: readonly CellValue[]) =>
-  Object.fromEntries(table.columns.map((name, i) => [name, row[i] ?? null]));
-function isJson(value: CellValue): boolean {
-  if (typeof value !== "string") return false;
-  try {
-    formatJson(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function pretty(value: CellValue): string {
-  if (typeof value === "string") {
-    try {
-      return formatJson(value);
-    } catch {
-      return value;
-    }
-  }
-  return cellText(value);
-}
 export function DataGrid({
   table,
   state,
@@ -518,7 +490,7 @@ export function DataGrid({
         ]
       : [];
   return (
-    <div className="data-workbench">
+    <div className={`data-workbench density-${state.display?.density ?? "comfortable"}`}>
       {compare && (
         <details open className="record-comparison">
           <summary>
@@ -574,6 +546,15 @@ export function DataGrid({
         </details>
       )}
       <div className="grid-actions action-row">
+        <span className="connection-target" title="Database connection and environment">
+          {state.connectionName}
+        </span>
+        {!state.tableInfo?.editable && state.editingReason && (
+          <details className="editing-feedback">
+            <summary>Editing unavailable</summary>
+            <p>{state.editingReason}</p>
+          </details>
+        )}
         {state.activeResultId && (
           <input
             type="search"
@@ -653,6 +634,18 @@ export function DataGrid({
             }}
           >
             Discard
+          </button>
+          <button
+            disabled={state.busy}
+            onClick={() =>
+              postRequest({
+                type: "table/saveDraft",
+                ...(state.activeResultId ? { resultId: state.activeResultId } : {}),
+                changes,
+              })
+            }
+          >
+            Save draft…
           </button>
           <span>Review SQL before applying · navigation is paused</span>
         </div>
@@ -927,7 +920,9 @@ export function DataGrid({
                             />
                           </span>
                         </span>
-                        <small>{table.columnMetadata?.[index]?.dataType ?? ""}</small>
+                        {state.display?.showDataTypes !== false && (
+                          <small>{table.columnMetadata?.[index]?.dataType ?? ""}</small>
+                        )}
                       </button>
                       <button
                         type="button"
@@ -1049,6 +1044,8 @@ export function DataGrid({
                             />
                           ) : typeof value === "object" && value?.type === "blob" ? (
                             `BLOB · ${value.bytes} bytes`
+                          ) : value === null ? (
+                            (state.display?.nullDisplay ?? "NULL")
                           ) : text === "" ? (
                             <span className="empty-string">empty</span>
                           ) : (

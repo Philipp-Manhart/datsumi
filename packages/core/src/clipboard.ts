@@ -29,3 +29,8 @@ export function clipboardTsv(
     ...rows.map((row) => row.map((value) => escape(clipboardValue(value))).join("\t")),
   ].join("\r\n");
 }
+
+/** CSV-only opt-in. Exact clipboard transfer never calls this transformation. */
+export function spreadsheetText(value: string, safe: boolean): string {
+  return safe && /^\s*[=+\-@]/u.test(value) ? "'" + value : value;
+}

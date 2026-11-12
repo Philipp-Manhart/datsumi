@@ -245,6 +245,98 @@ export class ConnectionManager {
       throw error;
     }
   }
+  async duplicateLocal(id: string): Promise<ConnectionProfile> {
+    this.ensureTrusted();
+    const source = this.get(id);
+    if (!["sqlite", "duckdb"].includes(source.driverId))
+      throw new Error("Choose a local connection.");
+    const copy: ConnectionProfile = {
+      id: randomUUID(),
+      name: (source.name + " copy").slice(0, 200),
+      family: source.family,
+      driverId: source.driverId,
+      configuration: { ...source.configuration },
+    };
+    this.profiles.push(copy);
+    try {
+      await this.persist();
+    } catch (error) {
+      this.profiles = this.profiles.filter((profile) => profile.id !== copy.id);
+      throw error;
+    }
+    return copy;
+  }
+  async updateServer(
+    id: string,
+    name: string,
+    configuration: ServerConfiguration | NoSqlConfiguration,
+    answer: CredentialAnswer,
+    ssh?: SshConfiguration,
+  ): Promise<ConnectionProfile> {
+    const original = this.get(id);
+    if (["sqlite", "duckdb"].includes(original.driverId))
+      throw new Error("Use local connection settings for this database.");
+    const parsed = isNoSqlDriver(original.driverId)
+      ? parseNoSqlConfiguration(original.driverId, configuration)
+      : parseSqlConfiguration(original.driverId as ServerDriver, configuration);
+    if (!name.trim() || name.length > 200)
+      throw new Error("Enter a connection name up to 200 characters.");
+    const base = { ...original };
+    delete base.ssh;
+    const updated: ConnectionProfile = {
+      ...base,
+      name: name.trim(),
+      configuration: { ...parsed },
+      ...(ssh ? { ssh: parseSshConfiguration(ssh) } : {}),
+    };
+    // Test the new destination with explicitly entered credentials, never old secrets.
+    await this.testServer(
+      original.driverId as ServerDriver | NoSqlDriver,
+      parsed,
+      answer.password,
+      ssh,
+    );
+    await this.credentialChange(id, async () => {
+      await this.disconnect(id);
+      if (!this.credentials) throw new Error("Credential service unavailable.");
+      await this.credentials.forget(id);
+      await this.credentials.set(updated, answer, true);
+      this.profiles = this.profiles.map((profile) => (profile.id === id ? updated : profile));
+      await this.persist();
+      this.sessions.set(id, this.createConnection(updated, answer.password));
+      await this.sessions.get(id);
+    });
+    return updated;
+  }
+  async updateLocal(
+    id: string,
+    name: string,
+    path: string,
+    readOnly: boolean,
+  ): Promise<ConnectionProfile> {
+    const original = this.get(id);
+    if (!["sqlite", "duckdb"].includes(original.driverId))
+      throw new Error("Choose a local connection.");
+    if (!name.trim() || name.length > 200) throw new Error("Enter a valid connection name.");
+    if (original.driverId === "duckdb") parseDuckDbConfiguration({ path, readOnly });
+    if (path !== ":memory:" && !(await stat(path)).isFile())
+      throw new Error("Choose an existing database file.");
+    const updated = { ...original, name: name.trim(), configuration: { path, readOnly } };
+    await this.credentialChange(id, async () => {
+      await this.disconnect(id);
+      this.profiles = this.profiles.map((profile) => (profile.id === id ? updated : profile));
+      try {
+        this.sessions.set(id, this.createConnection(updated));
+        await this.sessions.get(id);
+        await this.persist();
+      } catch (error) {
+        await this.disconnect(id);
+        this.profiles = this.profiles.map((profile) => (profile.id === id ? original : profile));
+        throw error;
+      }
+    });
+    return updated;
+  }
   private async credentialChange(id: string, operation: () => Promise<void>): Promise<void> {
     this.ensureTrusted();
     if (this.suspended.has(id)) throw new Error("Connection settings are already being changed.");
@@ -368,9 +460,7 @@ export class ConnectionManager {
       signal,
     );
   }
-  async exportTable(id: string, request: TableExport, signal?: DriverCancellation) {
-    const { driver, session } = await this.open(id);
-    if (!driver.exportTable) throw new Error("Table export is unavailable for this driver.");
+  async validateOutputDestination(path: string): Promise<void> {
     const sources = await Promise.allSettled(
       this.profiles
         .filter(
@@ -381,7 +471,7 @@ export class ConnectionManager {
         .map((profile) => stat(String(profile.configuration.path))),
     );
     try {
-      const destination = await stat(request.path);
+      const destination = await stat(path);
       if (
         sources.some(
           (source) =>
@@ -394,9 +484,21 @@ export class ConnectionManager {
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
+  }
+  async exportTable(id: string, request: TableExport, signal?: DriverCancellation) {
+    const { driver, session } = await this.open(id);
+    if (!driver.exportTable) throw new Error("Table export is unavailable for this driver.");
+    await this.validateOutputDestination(request.path);
     const temporary = `${request.path}.datsumi-${randomUUID()}.tmp`;
     try {
-      const count = await driver.exportTable(session, { ...request, path: temporary }, signal);
+      const count = await driver.exportTable(
+        session,
+        {
+          ...request,
+          path: temporary,
+        },
+        signal,
+      );
       await rename(temporary, request.path);
       return count;
     } finally {

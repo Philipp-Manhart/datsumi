@@ -174,6 +174,11 @@ export const webviewRequestSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("table/import") }),
   z.object({
+    type: z.literal("table/saveDraft"),
+    resultId: z.string().optional(),
+    changes: z.array(rowChangeSchema).max(1000),
+  }),
+  z.object({
     type: z.literal("table/value"),
     row: z.number().int().nonnegative(),
     column: z.number().int().nonnegative(),
@@ -258,6 +263,13 @@ export const webviewResponseSchema = z.object({
           editable: z.boolean(),
         }),
       ),
+    })
+    .optional(),
+  display: z
+    .object({
+      density: z.enum(["compact", "comfortable"]),
+      showDataTypes: z.boolean(),
+      nullDisplay: z.string().max(24),
     })
     .optional(),
   busy: z.boolean(),

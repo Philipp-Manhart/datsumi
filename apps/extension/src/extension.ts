@@ -17,8 +17,8 @@ import { SqliteDriver } from "@datsumi/driver-sqlite";
 import type { ExtensionContext } from "vscode";
 import * as vscode from "vscode";
 
-import { serverFormSetup } from "./connections/connectionForm";
-import { openConnectionForm } from "./connections/ConnectionFormPanel";
+import { registerConnectionCommands } from "./connections/connectionCommands";
+import { connectionHint } from "./connections/connectionHints";
 import { ConnectionManager } from "./connections/ConnectionManager";
 import { promptCredential } from "./connections/credentialPrompt";
 import { CredentialService } from "./connections/CredentialService";
@@ -27,9 +27,11 @@ import { createTunnelFactory } from "./connections/SshTunnel";
 import { DriverInstaller, parseCatalog } from "./drivers/DriverInstaller";
 import { DuckDbNativeInstaller } from "./drivers/DuckDbNativeInstaller";
 import { DataPanel } from "./results/DataPanel";
+import { DraftStore } from "./results/DraftStore";
 import { JsonValueEditor } from "./results/JsonValueEditor";
 import { QueryResultsViewProvider } from "./results/QueryResultsViewProvider";
 import { ResultsPanel } from "./results/ResultsPanel";
+import { userSetting } from "./settings";
 import { QueryHistory, type HistoryEntry } from "./sql/QueryHistory";
 import { SqlLanguageFeatures } from "./sql/SqlLanguageFeatures";
 import { statementAt } from "./sql/statements";
@@ -172,6 +174,11 @@ export function activate(context: ExtensionContext): void {
   const dataPanels = new Set<DataPanel>();
 
   const panels = new Set<ResultsPanel>();
+  const drafts = new DraftStore(context.workspaceState, () => ({
+    enabled: userSetting("drafts.recoveryEnabled", false),
+    days: vscode.workspace.getConfiguration("datsumi").get("drafts.retentionDays", 7),
+  }));
+  if (!userSetting("drafts.recoveryEnabled", false)) void drafts.clear().catch(() => {});
   const history = new QueryHistory(context, (id) => {
     const profile = connections.all().find((item) => item.id === id);
     if (!profile) return undefined;
@@ -186,6 +193,7 @@ export function activate(context: ExtensionContext): void {
             : "";
     return {
       connectionName: connections.displayName(id),
+      environment: connections.viewText(`environment:${id}`),
       driverId: profile.driverId,
       ...(database ? { database } : {}),
     };
@@ -295,7 +303,7 @@ export function activate(context: ExtensionContext): void {
     const item = await vscode.window.showQuickPick(
       connections.all().map((profile) => ({
         label: profile.name,
-        description: `${profile.configuration.path ?? profile.configuration.host}${profile.configuration.readOnly ? " (read-only)" : ""}`,
+        description: `${profile.configuration.path ?? profile.configuration.host}${profile.configuration.readOnly ? (["sqlite", "duckdb", "mongodb", "redis"].includes(profile.driverId) ? " (read-only)" : " (grid editing disabled)") : ""}`,
         id: profile.id,
       })),
       {
@@ -312,9 +320,9 @@ export function activate(context: ExtensionContext): void {
         try {
           return await callback(...args);
         } catch (error) {
-          void vscode.window.showErrorMessage(
-            `Datsumi: ${error instanceof Error ? error.message : String(error)}`,
-          );
+          const message = error instanceof Error ? error.message : String(error);
+          const hint = connectionHint(message);
+          void vscode.window.showErrorMessage(`Datsumi: ${message}${hint ? " " + hint : ""}`);
           return undefined;
         }
       }),
@@ -329,6 +337,12 @@ export function activate(context: ExtensionContext): void {
       resourceId,
       undefined,
       {
+        drafts,
+        restoreDraft: async (connectionId, table, changes) => {
+          const browser = results(connectionId, table.name, table.resourceId);
+          await browser.loadPage();
+          await browser.stageDraft(changes);
+        },
         json: (text, stage) => jsonEditor.open(text, stage),
         browse: async (
           connectionId: string,
@@ -365,48 +379,42 @@ export function activate(context: ExtensionContext): void {
   async function openDiagram(id: string, focus?: string): Promise<void> {
     await results(id, focus ? `Relationships: ${focus}` : "Schema Relationships").diagram(focus);
   }
-  register("datsumi.addConnection", async () => {
-    ensureTrusted();
-    const profile = await openConnectionForm(context.extensionUri, async (values, test, signal) => {
-      ensureTrusted();
-      if (values.driver === "sqlite" || values.driver === "duckdb") {
-        if (!values.path.trim()) throw new Error("Choose a database file.");
-        if (values.create && values.readOnly)
-          throw new Error("A new database cannot be read-only.");
-        if (test) throw new Error("Use Connect to open the selected file.");
-        if (values.driver === "duckdb") await installDriver("duckdb");
-        return values.driver === "sqlite"
-          ? connections.addSqlite(values.path, values.readOnly)
-          : connections.addDuckdb(values.path, values.readOnly, values.create);
-      }
-      const setup = serverFormSetup(values);
-      await installDriver(setup.driver);
-      const answer = { password: setup.password ?? "", mode: values.credentialMode };
-      if (test) {
-        await connections.testServer(
-          setup.driver,
-          setup.configuration,
-          answer.password,
-          setup.ssh,
-          signal,
-        );
-        return undefined;
-      }
-      return connections.addServer(
-        setup.driver,
-        setup.name,
-        setup.configuration,
-        answer,
-        setup.ssh,
-        signal,
-      );
-    });
-    if (!profile) return undefined;
-    setActive(profile.id);
-    tree.refresh();
-    await vscode.commands.executeCommand("datsumi.connections.focus");
-    return profile;
+  registerConnectionCommands({
+    register,
+    context,
+    connections,
+    chooseConnection,
+    installDriver,
+    ensureTrusted,
+    setActive,
+    refresh: () => tree.refresh(),
+    hasPendingEdits: (id) =>
+      queryResults.hasPendingEdits() ||
+      [...panels].some((panel) => panel.connectionId === id && panel.hasPendingEdits()),
+    changed: (id) => {
+      for (const panel of [...panels]) if (panel.connectionId === id) panel.dispose();
+      queryResults.clearConnection(id);
+      sql.invalidate(id);
+    },
   });
+  register("datsumi.clearDrafts", async () => {
+    await drafts.clear();
+    void vscode.window.showInformationMessage("Saved edit drafts cleared.");
+  });
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("datsumi")) {
+        for (const panel of panels) panel.refreshSettings();
+        queryResults.refreshSettings();
+      }
+      if (
+        event.affectsConfiguration("datsumi.drafts.recoveryEnabled") &&
+        !userSetting("drafts.recoveryEnabled", false)
+      )
+        void drafts.clear();
+    }),
+  );
+
   register("datsumi.manageDrivers", async () => {
     ensureTrusted();
     const selected = await vscode.window.showQuickPick(

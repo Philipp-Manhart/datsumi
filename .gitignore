@@ -4,6 +4,7 @@ coverage/
 .turbo/
 .DS_Store
 *.vsix
+*.vsix.sha256
 *.tsbuildinfo
 apps/webview/.vite/
 test-results/

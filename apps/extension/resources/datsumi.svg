@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <title>Datsumi</title>
+  <rect width="256" height="256" rx="48" fill="#142326"/>
+  <path d="M72 56H116C164 56 188 82 188 128S164 200 116 200H72" stroke="#A1E8CF" stroke-width="22" stroke-linecap="round"/>
+  <path d="M72 94H112M72 128H126M72 162H112" stroke="#63BBA8" stroke-width="16" stroke-linecap="round"/>
+</svg>

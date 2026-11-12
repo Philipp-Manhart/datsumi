@@ -1,6 +1,8 @@
 import { openSync, closeSync, writeSync, statSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 
+import { spreadsheetText } from "@datsumi/core";
 import type {
   CellValue,
   CellRequest,
@@ -26,9 +28,11 @@ export function parseConfiguration(value: unknown): SqliteConfiguration {
     typeof value !== "object" ||
     !("path" in value) ||
     typeof value.path !== "string" ||
-    !value.path
+    !value.path ||
+    !isAbsolute(value.path) ||
+    value.path.includes("\0")
   ) {
-    throw new Error("A SQLite file path is required.");
+    throw new Error("An absolute SQLite file path is required.");
   }
   if ("readOnly" in value && typeof value.readOnly !== "boolean")
     throw new Error("readOnly must be a boolean.");
@@ -481,7 +485,7 @@ export class SqliteDatabase {
     statement.setReadBigInts(true);
     statement.setReturnArrays(true);
     const columns = statement.columns().map((column) => column.name);
-    const fd = openSync(request.path, "w");
+    const fd = openSync(request.path, "wx", 0o600);
     let count = 0;
     const csv = (value: unknown): string =>
       '"' +
@@ -490,7 +494,7 @@ export class SqliteDatabase {
         : typeof value === "object"
           ? JSON.stringify(value)
           : typeof value === "string"
-            ? value
+            ? spreadsheetText(value, request.spreadsheetSafe ?? false)
             : (JSON.stringify(value) ?? "")
       ).replaceAll('"', '""') +
       '"';

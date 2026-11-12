@@ -1,6 +1,7 @@
 /* oxlint-disable no-await-in-loop -- SQL mutations and export writes must remain ordered on one session/file. */
 import { open, rm } from "node:fs/promises";
 
+import { spreadsheetText } from "@datsumi/core";
 import type {
   CellRequest,
   CellValue,
@@ -172,7 +173,7 @@ export class ServerDatabase {
         foreignKeys: [...relations.values()],
         indexes: [...ix.values()],
         editable:
-          !["duckdb", "clickhouse", "oracle", "libsql", "turso"].includes(this.driver) &&
+          this.driver !== "clickhouse" &&
           !this.config.readOnly &&
           table.kind !== "view" &&
           cols.some((col) => col.primaryKey > 0) &&
@@ -216,17 +217,22 @@ export class ServerDatabase {
     const { name, schema } = parseResource(info.resourceId);
     return qualifiedName(this.driver, name, schema);
   }
-  private selectColumn(column: TableInfo["columns"][number]): string {
+  private columnExpression(column: TableInfo["columns"][number]): string {
     const name = quoteName(this.driver, column.name);
     if (this.driver === "mssql" && /^(?:decimal|numeric|money|smallmoney)$/i.test(column.type))
-      return `CONVERT(VARCHAR(100), ${name}) AS ${name}`;
+      return `CONVERT(VARCHAR(100), ${name})`;
     if (this.driver === "oracle" && /^(?:DATE|TIMESTAMP)/i.test(column.type)) {
       const date = /^DATE$/i.test(column.type);
       const zoned = /TIME ZONE/i.test(column.type);
       const expression = zoned ? `CAST(${name} AS TIMESTAMP(9) WITH TIME ZONE)` : name;
-      return `TO_CHAR(${expression}, 'YYYY-MM-DD"T"HH24:MI:SS${date ? "" : ".FF9"}${zoned ? "TZH:TZM" : ""}') AS ${name}`;
+      return `TO_CHAR(${expression}, 'YYYY-MM-DD"T"HH24:MI:SS${date ? "" : ".FF9"}${zoned ? "TZH:TZM" : ""}')`;
     }
     return name;
+  }
+  private selectColumn(column: TableInfo["columns"][number]): string {
+    const name = quoteName(this.driver, column.name);
+    const expression = this.columnExpression(column);
+    return expression === name ? name : `${expression} AS ${name}`;
   }
   async browse(request: TablePageRequest): Promise<TablePage> {
     if (
@@ -310,9 +316,24 @@ export class ServerDatabase {
           if (this.driver === "mssql")
             return `CONVERT(VARBINARY(MAX), CONVERT(NVARCHAR(MAX), ${identifier})) = CONVERT(VARBINARY(MAX), CONVERT(NVARCHAR(MAX), ${mark}))`;
         }
+        if (this.driver === "oracle") {
+          if (/^(?:N?CLOB)$/i.test(col.type))
+            return `DBMS_LOB.COMPARE(${identifier}, ${/^NCLOB$/i.test(col.type) ? "TO_NCLOB" : "TO_CLOB"}(${mark})) = 0`;
+          if (/^(?:DATE|TIMESTAMP)/i.test(col.type))
+            return `${this.columnExpression(col)} = ${mark}`;
+        }
         return `${identifier} = ${mark}`;
       })
       .join(" AND ");
+  }
+  private writeValue(column: TableInfo["columns"][number], mark: string, value: CellValue): string {
+    if (this.driver !== "oracle" || value === null || typeof value !== "string") return mark;
+    if (/^DATE$/i.test(column.type)) return `TO_DATE(${mark}, 'YYYY-MM-DD"T"HH24:MI:SS')`;
+    if (/^TIMESTAMP/i.test(column.type))
+      return /TIME ZONE/i.test(column.type)
+        ? `TO_TIMESTAMP_TZ(${mark}, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM')`
+        : `TO_TIMESTAMP(${mark}, 'YYYY-MM-DD"T"HH24:MI:SS.FF9')`;
+    return mark;
   }
   private change(info: TableInfo, change: RowChange): { text: string; values: unknown[] } {
     const entries = Object.entries(change.values),
@@ -321,10 +342,14 @@ export class ServerDatabase {
       throw new Error("Unknown or generated columns cannot be changed.");
     if (change.kind === "insert") {
       const names = entries.map(([name]) => quoteName(this.driver, name));
-      const marks = entries.map(([, value]) => {
+      const marks = entries.map(([name, value]) => {
         const mark = parameter(this.driver, values.length);
         values.push(input(value));
-        return mark;
+        return this.writeValue(
+          info.columns.find((col) => col.name === name)!,
+          mark,
+          value,
+        );
       });
       return {
         text: names.length
@@ -341,7 +366,8 @@ export class ServerDatabase {
       .map(([name, value]) => {
         const mark = parameter(this.driver, values.length);
         values.push(input(value));
-        return `${quoteName(this.driver, name)} = ${mark}`;
+        const column = info.columns.find((col) => col.name === name)!;
+        return `${quoteName(this.driver, name)} = ${this.writeValue(column, mark, value)}`;
       })
       .join(", ");
     const where = this.predicate(info, change.original, values);
@@ -354,8 +380,45 @@ export class ServerDatabase {
       values,
     };
   }
+  private async verifyEditTarget(info: TableInfo, lock: boolean): Promise<void> {
+    if (!["mysql", "mariadb"].includes(this.driver)) return;
+    // A temporary table shadows even schema-qualified names. Lock the resolved target
+    // before inspecting it so another session cannot change its engine during a batch.
+    if (lock)
+      await this.raw(
+        `SELECT ${info.columns
+          .filter((col) => col.primaryKey)
+          .map((col) => quoteName(this.driver, col.name))
+          .join(", ")} FROM ${this.target(info)} WHERE 1=0 FOR UPDATE`,
+      );
+    const ddl = await this.raw(`SHOW CREATE TABLE ${this.target(info)}`);
+    const index = ddl.columns.findIndex((col) => /create table/i.test(col.name));
+    const text = ddl.rows[0]?.[index];
+    const { schema, name } = parseResource(info.resourceId);
+    // Read authoritative engine data again after acquiring the metadata lock.
+    // Never infer ENGINE from DDL text: comments/default strings are user-controlled.
+    const engine = await this.raw(
+      "SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?",
+      [schema, name],
+    );
+    const actualEngine = engine.rows[0]?.[0];
+    if (
+      typeof text !== "string" ||
+      !/^CREATE TABLE\s/i.test(text) ||
+      engine.rows.length !== 1 ||
+      typeof actualEngine !== "string" ||
+      actualEngine.toLowerCase() !== "innodb"
+    )
+      throw new Error(
+        "Grid editing requires a verified permanent InnoDB table. A temporary or nontransactional table may shadow this name. No row changes were sent; remove the temporary table or reconnect.",
+      );
+  }
   async changes(request: TableChanges, apply: boolean): Promise<string[]> {
     const info = await this.table(request.resourceId);
+    if (this.driver === "clickhouse")
+      throw new Error(
+        "ClickHouse grid edits are unavailable: this adapter cannot roll back an edit batch. No changes were sent.",
+      );
     if (!info.editable)
       throw new Error("Editing requires a writable transactional table with a primary key.");
     if (!request.changes.length || request.changes.length > 1000)
@@ -363,14 +426,25 @@ export class ServerDatabase {
     const jobs = request.changes.map((change) => this.change(info, change));
     // Preview contains placeholders; secrets and literal data do not enter SQL logs.
     const preview = jobs.map((job) => `${job.text}; -- ${job.values.length} bound values`);
-    if (!apply) return preview;
+    if (!apply) {
+      await this.verifyEditTarget(info, false);
+      return preview;
+    }
     const nested = await this.backend.inTransaction();
-    if (!nested) await this.raw(this.driver === "mssql" ? "BEGIN TRANSACTION" : "BEGIN");
-    else
+    if (nested && ["duckdb", "libsql", "turso"].includes(this.driver))
+      throw new Error(
+        "Commit or roll back the open SQL transaction before applying staged edits. Your draft is retained; this adapter cannot isolate a nested edit batch with savepoints.",
+      );
+    // Oracle begins a transaction with its first DML statement, not BEGIN (PL/SQL).
+    if (!nested) {
+      if (this.driver !== "oracle")
+        await this.raw(this.driver === "mssql" ? "BEGIN TRANSACTION" : "BEGIN");
+    } else
       await this.raw(
         this.driver === "mssql" ? "SAVE TRANSACTION datsumi_batch" : "SAVEPOINT datsumi_batch",
       );
     try {
+      await this.verifyEditTarget(info, true);
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i]!,
           result = await this.raw(job.text, job.values);
@@ -380,14 +454,17 @@ export class ServerDatabase {
           );
       }
       if (!nested) await this.raw("COMMIT");
-      else if (this.driver !== "mssql") await this.raw("RELEASE SAVEPOINT datsumi_batch");
+      else if (!["mssql", "oracle"].includes(this.driver))
+        await this.raw("RELEASE SAVEPOINT datsumi_batch");
     } catch (error) {
       try {
         await this.raw(
           nested
             ? this.driver === "mssql"
               ? "ROLLBACK TRANSACTION datsumi_batch"
-              : "ROLLBACK TO SAVEPOINT datsumi_batch"
+              : this.driver === "oracle"
+                ? "ROLLBACK TO datsumi_batch"
+                : "ROLLBACK TO SAVEPOINT datsumi_batch"
             : "ROLLBACK",
         );
       } catch {
@@ -462,10 +539,15 @@ export class ServerDatabase {
   }
 
   async export(request: TableExport): Promise<number> {
-    const handle = await open(request.path, "wx");
+    const handle = await open(request.path, "wx", 0o600);
     let count = 0;
     const csv = (value: string | number | boolean | null | undefined) =>
-      '"' + String(value ?? "").replaceAll('"', '""') + '"';
+      '"' +
+      (typeof value === "string"
+        ? spreadsheetText(value, request.spreadsheetSafe ?? false)
+        : String(value ?? "")
+      ).replaceAll('"', '""') +
+      '"';
     try {
       if (request.format === "json") await handle.write("[\n");
       for (let offset = 0; ; offset += 500) {

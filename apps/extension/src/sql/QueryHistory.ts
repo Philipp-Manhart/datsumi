@@ -2,10 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import type { ExtensionContext } from "vscode";
 import * as vscode from "vscode";
+
+import { userSetting } from "../settings";
 export interface HistoryConnectionInfo {
   connectionName: string;
   driverId: string;
   database?: string;
+  environment?: string;
 }
 export interface HistoryEntry {
   connectionName?: string;
@@ -54,8 +57,30 @@ export class QueryHistory {
             id: typeof e.id === "string" ? e.id : randomUUID(),
           }))
       : [];
+    const before = this.entries.length;
+    this.prune();
+    if (before !== this.entries.length) void this.persist().catch(() => {});
+  }
+  private prune(): void {
+    const config = vscode.workspace.getConfiguration("datsumi");
+    const days = Math.max(0, Math.min(3650, config.get("history.retentionDays", 30)));
+    const budget = Math.max(1, Math.min(25, config.get("history.maxStorageMiB", 5))) * 1024 * 1024;
+    const count = Math.max(10, Math.min(2000, config.get("history.limit", 200)));
+    let bytes = 2,
+      recent = 0;
+    this.entries = this.entries
+      .filter((entry) => {
+        if (days && entry.timestamp < Date.now() - days * 86400000) return false;
+        if (!entry.pinned && recent++ >= count) return false;
+        bytes += Buffer.byteLength(JSON.stringify(entry)) + 1;
+        return bytes <= budget;
+      })
+      .slice(0, 2500);
   }
   all(): readonly HistoryEntry[] {
+    const before = this.entries.length;
+    this.prune();
+    if (before !== this.entries.length) void this.persist().catch(() => {});
     return this.entries.map((entry) => ({ ...entry }));
   }
   get(id: string): HistoryEntry | undefined {
@@ -87,6 +112,7 @@ export class QueryHistory {
   }
   private persist(): Promise<void> {
     this.changeEmitter.fire();
+    this.prune();
     const snapshot = this.entries.map((entry) => ({ ...entry }));
     this.pending = this.pending
       .catch(() => {})
@@ -104,11 +130,21 @@ export class QueryHistory {
   ): void {
     const config = vscode.workspace.getConfiguration("datsumi");
     if (
+      this.resolveConnection?.(connectionId)?.environment === "production" &&
+      !userSetting("history.recordProduction", false)
+    )
+      return;
+    if (
       !config.get("history.enabled", true) ||
       config.get<string[]>("history.disabledConnections", []).includes(connectionId)
     )
       return;
-    const limit = Math.max(10, Math.min(2000, config.get("history.limit", 200)));
+    if (!this.context.workspaceState.get("datsumi.historyNoticeSeen", false)) {
+      void this.context.workspaceState.update("datsumi.historyNoticeSeen", true);
+      void vscode.window.showInformationMessage?.(
+        "Datsumi saves query history locally as unencrypted text. Configure History & Privacy settings to change retention or disable recording.",
+      );
+    }
     this.entries.unshift({
       id: randomUUID(),
       connectionId,
@@ -120,7 +156,7 @@ export class QueryHistory {
       status: error ? "error" : "success",
       ...details,
     });
-    this.entries = this.entries.filter((e, i) => e.pinned || i < limit).slice(0, 2500);
+    this.prune();
     void this.persist().catch(() =>
       vscode.window.showWarningMessage("Query history could not be saved."),
     );

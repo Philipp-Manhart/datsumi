@@ -25,7 +25,8 @@ export class ConnectionsTreeProvider
         : vscode.TreeItemCollapsibleState.None,
     );
     item.id = `${node.connectionId}:${resource?.id ?? "connection"}`;
-    item.contextValue = resource?.kind ?? "connection";
+    item.contextValue =
+      resource?.kind ?? (profile.driverId === "sqlite" ? "connection.sqlite" : "connection");
     if (!resource) {
       const environment = this.connections.viewText(`environment:${node.connectionId}`);
       if (environment) item.description = `${environment.toUpperCase()} · ${profile.driverId}`;
@@ -34,7 +35,7 @@ export class ConnectionsTreeProvider
       resource?.description ??
       (!resource
         ? profile.configuration.readOnly
-          ? `${profile.driverId} · read-only`
+          ? `${profile.driverId} · ${["sqlite", "duckdb", "mongodb", "redis"].includes(profile.driverId) ? "read-only" : "grid editing disabled"}`
           : profile.driverId
         : undefined);
     if (description !== undefined && !item.description) item.description = description;

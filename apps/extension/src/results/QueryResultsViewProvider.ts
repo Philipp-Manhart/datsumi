@@ -4,7 +4,9 @@ import { viewPreferencesSchema, webviewRequestSchema } from "@datsumi/protocol";
 import * as vscode from "vscode";
 
 import type { ConnectionManager } from "../connections/ConnectionManager";
+import { saveEditDraft } from "../data/editDraft";
 import { saveResult } from "../data/files";
+import { resultSettings, defaultPageSize } from "../settings";
 import type { QueryHistory } from "../sql/QueryHistory";
 import { compareResults } from "./compareResults";
 import { rowIdentity, editableResult, refreshedChanges, updateSnapshot } from "./editableResult";
@@ -64,6 +66,17 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
               vscode.window.showErrorMessage(String(error)),
             );
             return;
+          case "table/saveDraft": {
+            const entry = message.resultId ? this.store.editTarget(message.resultId) : undefined;
+            if (entry)
+              void saveEditDraft(
+                entry.connectionName,
+                entry.info?.name ?? "query result",
+                message.changes,
+                (path) => this.connections.validateOutputDestination(path),
+              ).catch((error) => vscode.window.showErrorMessage(String(error)));
+            return;
+          }
           case "table/stage":
             if (
               !this.running &&
@@ -232,6 +245,7 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
         throw error;
       }
       this.store.complete(id, result);
+      this.store.page(id, 0, defaultPageSize());
       if (result.kind === "table" && result.additionalResults?.length) {
         for (const extra of result.additionalResults) {
           try {
@@ -425,8 +439,12 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
       if (message.apply) {
         this.actions?.changed();
         try {
-          const rows = await refreshedChanges(info, message.changes, (text, parameters) =>
-            this.connections.execute(entry.connectionId, { language: "sql", text, parameters }),
+          const rows = await refreshedChanges(
+            info,
+            message.changes,
+            (text, parameters) =>
+              this.connections.execute(entry.connectionId, { language: "sql", text, parameters }),
+            (request) => this.connections.browse(entry.connectionId, request),
           );
           this.store.complete(entry.id, updateSnapshot(entry.result, info, message.changes, rows));
           this.store.sort(entry.id, entry.sort);
@@ -551,6 +569,12 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
     const entry = this.store.editTarget();
     return `result:${entry?.connectionId}:${entry?.info?.resourceId ?? (entry?.result?.kind === "table" ? entry.result.columns.join(":") : "value")}`;
   }
+  hasPendingEdits(): boolean {
+    return this.store.hasEdits();
+  }
+  refreshSettings(): void {
+    this.send();
+  }
   private send(): void {
     const state = this.store.state(),
       entry = this.store.editTarget();
@@ -560,6 +584,7 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
     if (this.view)
       void this.view.webview.postMessage({
         ...state,
+        display: resultSettings(),
         driverName: entry ? this.connections.get(entry.connectionId).driverId : undefined,
         ...(preferences.success ? { preferences: preferences.data } : {}),
       });

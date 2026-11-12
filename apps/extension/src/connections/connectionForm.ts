@@ -1,3 +1,4 @@
+import type { ConnectionProfile } from "@datsumi/core";
 import { parseNoSqlConfiguration } from "@datsumi/driver-nosql/configuration";
 import {
   parseServerConfiguration,
@@ -116,5 +117,30 @@ export function serverFormSetup(values: ConnectionFormValues): ConnectionSetup {
     name:
       values.name.trim() || setup.name || `${values.driver} · ${values.host}/${values.database}`,
     password: values.password || setup.password || "",
+  };
+}
+
+/** Prefill non-secret fields only. Editing and duplication always require new credentials. */
+export function profileFormValues(profile: ConnectionProfile): Partial<ConnectionFormValues> {
+  const c = profile.configuration;
+  return {
+    driver: profile.driverId as ConnectionFormValues["driver"],
+    name: profile.name,
+    mode: typeof c.endpoint === "string" ? "url" : "fields",
+    url: String(c.endpoint ?? ""),
+    host: String(c.host ?? "localhost"),
+    port: String(c.port ?? ""),
+    database: String(c.database ?? ""),
+    username: String(c.username ?? ""),
+    password: "",
+    credentialMode: "session",
+    tls: c.tls !== "disable",
+    ca: String(c.ca ?? ""),
+    path: String(c.path ?? ""),
+    create: false,
+    readOnly: c.readOnly === true,
+    ssh: profile.ssh
+      ? { ...profile.ssh, port: String(profile.ssh.port), enabled: true }
+      : { enabled: false, host: "", port: "22", username: "", keyPath: "" },
   };
 }

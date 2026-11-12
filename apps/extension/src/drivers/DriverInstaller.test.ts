@@ -63,6 +63,7 @@ describe("optional driver installation", () => {
     await installer.ensure("postgres", options);
     expect(fetch).toHaveBeenCalledWith(new URL("https://example.com/release/postgres.cjs"), {
       redirect: "error",
+      signal: expect.any(AbortSignal),
     });
     await installer.remove("postgres");
     await writeFile(join(root, "postgres.cjs"), bytes);
@@ -108,4 +109,32 @@ describe("optional driver installation", () => {
       "download failed",
     );
   });
+});
+
+it("aborts a stalled download without installing partial executable data", async () => {
+  const { installer } = await fixture();
+  const timeout = new AbortController();
+  const timer = vi.spyOn(AbortSignal, "timeout").mockReturnValue(timeout.signal);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof globalThis.fetch>(
+      async (_input, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => reject(new Error("Download timed out")),
+            { once: true },
+          );
+        }),
+    ),
+  );
+  try {
+    const pending = installer.download("postgres", "https://example.com/");
+    timeout.abort();
+    await expect(pending).rejects.toThrow("timed out");
+    expect(await installer.installed("postgres")).toBeUndefined();
+  } finally {
+    timer.mockRestore();
+    vi.unstubAllGlobals();
+  }
 });

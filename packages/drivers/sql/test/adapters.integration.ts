@@ -177,6 +177,43 @@ for (const id of ["postgres", "mysql", "mariadb", "mssql"] as const) {
         if (mysqlFamily) await query("SET SESSION sql_mode=DEFAULT");
       }
     });
+    it.skipIf(!["mysql", "mariadb"].includes(id))(
+      "rejects temporary nontransactional shadows before changing any row",
+      async () => {
+        const info = await table();
+        await query(
+          `CREATE TEMPORARY TABLE ${parent} (id INTEGER PRIMARY KEY,name VARCHAR(100),amount DECIMAL(30,8),note VARCHAR(100)) ENGINE=MEMORY`,
+        );
+        try {
+          await query(`INSERT INTO ${parent} VALUES(1,'shadow',1,NULL),(2,'second',2,NULL)`);
+          const request = {
+            resourceId: info.resourceId,
+            changes: [
+              {
+                kind: "update" as const,
+                original: { id: 1, name: "shadow", amount: "1.00000000", note: null },
+                values: { name: "must not write" },
+              },
+              {
+                kind: "update" as const,
+                original: { id: 2, name: "stale", amount: "2.00000000", note: null },
+                values: { name: "conflict" },
+              },
+            ],
+          };
+          await expect(driver.changeRows(session, request, false)).rejects.toThrow(
+            /permanent InnoDB|writable transactional/,
+          );
+          await expect(driver.changeRows(session, request, true)).rejects.toThrow(
+            /permanent InnoDB|writable transactional/,
+          );
+          const result = await query(`SELECT name FROM ${parent} WHERE id=1`);
+          expect(result.kind === "table" && result.rows[0]?.[0]).toBe("shadow");
+        } finally {
+          await query(`DROP TEMPORARY TABLE ${parent}`);
+        }
+      },
+    );
     it("stages without executing, commits atomically, and detects stale originals", async () => {
       const info = await table();
       const page = await driver.browseTable(session, {

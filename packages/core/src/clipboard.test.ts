@@ -42,3 +42,23 @@ describe("Excel clipboard text", () => {
     expect(clipboardTsv(["blob"], [[{ type: "blob", hex: "00ff", bytes: 2 }]])).toBe("00ff");
   });
 });
+
+it("keeps exact TSV unchanged while offering a separate spreadsheet-safe text transformation", async () => {
+  const { spreadsheetText } = await import("./clipboard");
+  for (const value of ["=SUM(A1:A2)", "+cmd", "-cmd", "@SUM(A1)", " \t=1+1", "\n=1+1"]) {
+    expect(spreadsheetText(value, true)).toBe("'" + value);
+    expect(spreadsheetText(value, false)).toBe(value);
+    expect(clipboardTsv(["x"], [[value]])).not.toContain("'" + value);
+  }
+});
+
+it("preserves rectangular structure for wide multi-page transfers", () => {
+  const columns = Array.from({ length: 80 }, (_, i) => `column_${i}`);
+  const rows = Array.from({ length: 1201 }, (_, r) => columns.map((_, c) => `${r}:${c}`));
+  const text = clipboardTsv(columns, rows, true),
+    lines = text.split("\r\n");
+  expect(lines).toHaveLength(1202);
+  expect(lines[0]?.split("\t")).toEqual(columns);
+  expect(lines.at(-1)?.split("\t")).toHaveLength(80);
+  expect(lines.at(-1)?.split("\t").at(-1)).toBe("1200:79");
+});

@@ -220,6 +220,7 @@ export interface TableExport {
   readonly request: TablePageRequest;
   readonly path: string;
   readonly format: "csv" | "json";
+  readonly spreadsheetSafe?: boolean;
 }
 
 export interface CellRequest {
@@ -256,6 +257,6 @@ export interface DataChange {
   ttl?: number;
 }
 
-export { clipboardTsv, clipboardValue } from "./clipboard";
+export { clipboardTsv, clipboardValue, spreadsheetText } from "./clipboard";
 
 export { statementAt } from "./statements";
