@@ -59,11 +59,13 @@ exports.activate = async () => {
 `,
 );
 const steps = [];
+let supportsSharedData = false;
 async function run(profile, args, env = {}) {
   const started = Date.now();
   const common = [
     `--user-data-dir=${join(root, profile, "user")}`,
     `--extensions-dir=${join(root, profile, "extensions")}`,
+    ...(supportsSharedData ? [`--shared-data-dir=${join(root, profile, "shared")}`] : []),
   ];
   const output = [];
   await new Promise((resolveRun, reject) => {
@@ -139,6 +141,7 @@ async function launch(profile, test, phase, expected) {
 let success = false;
 try {
   const version = await run("fresh", ["--version"]);
+  supportsSharedData = Number(version.match(/^1\.(\d+)/)?.[1] ?? 0) >= 146;
   await run("fresh", ["--install-extension", vsix, "--force"]);
   if (screenshots) {
     await launch("fresh", "capture.cjs", "screenshots", manifest.version);

@@ -24,6 +24,7 @@ with zipfile.ZipFile(path) as archive:
         payload = archive.read('extension/dist/drivers/' + artifact['file'])
         assert len(payload) == artifact['bytes']
         assert hashlib.sha256(payload).hexdigest() == artifact['sha256']
+    assert not any(re.search(r'\.vsix(?:\.sha256)?$', name) for name in names), 'Nested release artifact in VSIX'
     inventories = [name for name in names if name.endswith('.components.json')]
     assert len(inventories) >= len(catalog) + 3, 'Missing core/webview/native license inventory'
     components = set()

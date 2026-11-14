@@ -4,3 +4,6 @@ esbuild.mjs
 src/**
 tsconfig.json
 test/**
+
+*.vsix
+*.vsix.sha256
