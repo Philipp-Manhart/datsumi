@@ -13,8 +13,8 @@ if redis.call('HLEN',KEYS[1]) ~= n then return 0 end
 local updates={}; local removals={}
 for k,v in pairs(new) do table.insert(updates,k); table.insert(updates,v) end
 for k,v in pairs(old) do if new[k] == nil then table.insert(removals,k) end end
-if not redis.acl_check_cmd('HSET',KEYS[1],unpack(updates)) then return redis.error_reply('Hash update permission denied before writing') end
-if #removals>0 and not redis.acl_check_cmd('HDEL',KEYS[1],unpack(removals)) then return redis.error_reply('Hash delete permission denied before writing') end
+if not redis.acl_check_cmd('HSET',KEYS[1],unpack(updates)) then return -1 end
+if #removals>0 and not redis.acl_check_cmd('HDEL',KEYS[1],unpack(removals)) then return -2 end
 redis.call('HSET',KEYS[1],unpack(updates))
 if #removals>0 then redis.call('HDEL',KEYS[1],unpack(removals)) end
 return 1`;
@@ -169,6 +169,10 @@ export async function connectRedis(
           arguments: [request.original, request.text],
         }),
       );
+      if (result === -1 || result === -2)
+        throw new Error(
+          "Hash update permission denied before writing. No fields changed; grant the required HSET/HDEL permissions before reviewing again.",
+        );
       if (result !== 1)
         throw new Error(
           "Key changed, expired, or was removed. Nothing was overwritten; refresh and compare.",
