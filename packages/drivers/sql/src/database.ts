@@ -38,6 +38,7 @@ function scalar(value: CellValue | undefined): string | number | boolean | null 
   return value ?? null;
 }
 export class ServerDatabase {
+  private writeOutcomeUnknown = false;
   constructor(
     readonly driver: ServerDriver | "duckdb",
     private readonly backend: Backend,
@@ -414,6 +415,10 @@ export class ServerDatabase {
       );
   }
   async changes(request: TableChanges, apply: boolean): Promise<string[]> {
+    if (this.writeOutcomeUnknown)
+      throw new Error(
+        "Write outcome unknown. Disconnect, reconnect and inspect fresh rows before reviewing a new edit batch. Do not retry the previous changes blindly.",
+      );
     const info = await this.table(request.resourceId);
     if (this.driver === "clickhouse")
       throw new Error(
@@ -443,6 +448,7 @@ export class ServerDatabase {
       await this.raw(
         this.driver === "mssql" ? "SAVE TRANSACTION datsumi_batch" : "SAVEPOINT datsumi_batch",
       );
+    let committing = false;
     try {
       await this.verifyEditTarget(info, true);
       for (let i = 0; i < jobs.length; i++) {
@@ -453,10 +459,19 @@ export class ServerDatabase {
             "Edit conflict: the row changed or is no longer uniquely identifiable. The batch was rolled back; your draft is retained.",
           );
       }
-      if (!nested) await this.raw("COMMIT");
-      else if (!["mssql", "oracle"].includes(this.driver))
+      if (!nested) {
+        committing = true;
+        await this.raw("COMMIT");
+      } else if (!["mssql", "oracle"].includes(this.driver))
         await this.raw("RELEASE SAVEPOINT datsumi_batch");
     } catch (error) {
+      if (committing) {
+        this.writeOutcomeUnknown = true;
+        await this.backend.close().catch(() => {});
+        throw new Error(
+          "Write outcome unknown: the connection failed while confirming COMMIT. The server may have committed. Disconnect, reconnect and inspect fresh rows before reviewing another batch. Do not retry automatically.",
+        );
+      }
       try {
         await this.raw(
           nested
@@ -468,6 +483,7 @@ export class ServerDatabase {
             : "ROLLBACK",
         );
       } catch {
+        this.writeOutcomeUnknown = true;
         await this.backend.close();
         throw new Error(
           "Batch failed and the session was closed because rollback could not be confirmed. Reconnect and verify database state.",

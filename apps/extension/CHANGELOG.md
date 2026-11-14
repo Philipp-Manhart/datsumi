@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-14 (preview)
+
+- Protect captured exports, saved history, drafts, backups and streamed exports with alias-safe atomic output, private files and destination revalidation.
+- Treat lost COMMIT acknowledgement as an unknown write outcome, retain drafts and block staged retries until reconnect. Warn before closing connections with pending edits or transactions.
+- Bound aggregate retained query data, add clipboard preparation/cancellation feedback and synthetic long/wide/JSON benchmarks.
+- Preserve existing SQL formatter choices; add native Getting Started and offline Help and Privacy.
+- Validate the actual installed VSIX, v0.1.0 upgrade, reload/reinstall and the declared minimum VS Code runtime. Keep public/platform/provider acceptance explicit.
+
 ## 0.2.0 — 2026-11-11
 
 - License Datsumi under MIT; retain complete dependency inventories/notices for host, webview, workers and native components. Use the existing MIT mysql2 transport for MariaDB.

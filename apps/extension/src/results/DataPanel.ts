@@ -155,6 +155,7 @@ export class DataPanel implements vscode.Disposable {
           }
         }
       })().catch((error) => {
+        if (message.type === "data/edit" && message.apply) this.pending = undefined;
         this.state = {
           ...this.state,
           busy: false,
@@ -203,6 +204,9 @@ export class DataPanel implements vscode.Disposable {
   private send(): void {
     if (!this.disposed)
       void this.panel.webview.postMessage(webviewResponseSchema.parse(this.state));
+  }
+  hasPendingEdits(): boolean {
+    return Boolean(this.pending);
   }
   dispose(): void {
     this.panel.dispose();

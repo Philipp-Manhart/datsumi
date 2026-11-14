@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { ExtensionContext } from "vscode";
 import * as vscode from "vscode";
 
+import { writeOutput, type OutputValidator } from "../data/outputFile";
 import { userSetting } from "../settings";
 export interface HistoryConnectionInfo {
   connectionName: string;
@@ -35,6 +36,7 @@ export class QueryHistory {
   constructor(
     private readonly context: ExtensionContext,
     private readonly resolveConnection?: (id: string) => HistoryConnectionInfo | undefined,
+    private readonly validateOutput?: OutputValidator,
   ) {
     const saved = context.workspaceState.get<unknown>("datsumi.history", []);
     this.entries = Array.isArray(saved)
@@ -231,7 +233,10 @@ export class QueryHistory {
         filters: selectedEntry.language === "json" ? { JSON: ["json"] } : { SQL: ["sql"] },
       });
       if (uri) {
-        await vscode.workspace.fs.writeFile(uri, Buffer.from(selectedEntry.text));
+        if (!this.validateOutput) throw new Error("Safe file saving is unavailable.");
+        if (uri.scheme !== "file" && !(vscode.env.remoteName && uri.scheme === "vscode-remote"))
+          throw new Error("Choose a file on the extension host.");
+        await writeOutput(uri.fsPath, selectedEntry.text, this.validateOutput);
         await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(uri));
       }
     }

@@ -28,3 +28,13 @@ playwright-report/
 *.duckdb.wal
 *.duckdb.tmp/
 *.log
+
+# Documentation copied into the extension during packaging
+apps/extension/PRIVACY.md
+apps/extension/SECURITY.md
+apps/extension/SUPPORT.md
+apps/extension/SETTINGS.md
+apps/extension/SUPPORT-MATRIX.md
+apps/extension/CONNECTIONS.md
+apps/extension/GETTING-STARTED.md
+apps/extension/SECURITY-AUDIT.md

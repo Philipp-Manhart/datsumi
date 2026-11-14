@@ -27,7 +27,7 @@ it("creates exclusively and backs up committed WAL contents while the source is 
       }
       const alias = join(directory, "alias.sqlite");
       await link(source, alias);
-      await expect(backupSqlite(source, alias)).rejects.toThrow("different from");
+      await expect(backupSqlite(source, alias)).rejects.toThrow(/different from|link/);
       expect(db.prepare("SELECT COUNT(*) AS n FROM data").get()?.n).toBe(1);
       // oxlint-disable-next-line vitest/no-conditional-expect -- Windows ACLs do not expose POSIX permission bits.
       if (process.platform !== "win32") expect((await stat(target)).mode & 0o077).toBe(0);

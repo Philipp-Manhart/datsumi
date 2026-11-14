@@ -1,7 +1,7 @@
-import { writeFile } from "node:fs/promises";
-
 import type { RowChange } from "@datsumi/core";
 import * as vscode from "vscode";
+
+import { writeOutput } from "./outputFile";
 export async function saveEditDraft(
   connection: string,
   table: string,
@@ -16,8 +16,7 @@ export async function saveEditDraft(
   if (!file) return;
   if (file.scheme !== "file" && !(vscode.env.remoteName && file.scheme === "vscode-remote"))
     throw new Error("Choose a file on the extension host.");
-  await validateDestination(file.fsPath);
-  await writeFile(
+  await writeOutput(
     file.fsPath,
     JSON.stringify(
       {
@@ -30,6 +29,6 @@ export async function saveEditDraft(
       null,
       2,
     ) + "\n",
-    { mode: 0o600 },
+    validateDestination,
   );
 }

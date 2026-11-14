@@ -1,7 +1,7 @@
 {
   "name": "datsumi",
   "displayName": "Datsumi — Database Explorer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "A modern, unified database client for VS Code. Explore, query, and manage SQL and NoSQL databases without leaving your editor.",
   "categories": [
@@ -30,7 +30,7 @@
     "build": "bun esbuild.mjs",
     "clean": "rm -rf dist",
     "dev": "bun esbuild.mjs --watch",
-    "package": "vsce package --no-dependencies",
+    "package": "vsce package --no-dependencies --pre-release",
     "test:integration": "bun run build && node test/run.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "vscode:prepublish": "bun run build"
@@ -326,6 +326,18 @@
         "command": "datsumi.clearDrafts",
         "title": "Clear Saved Edit Drafts",
         "category": "Datsumi"
+      },
+      {
+        "command": "datsumi.gettingStarted",
+        "title": "Getting Started",
+        "category": "Datsumi",
+        "icon": "$(book)"
+      },
+      {
+        "command": "datsumi.help",
+        "title": "Help and Privacy…",
+        "category": "Datsumi",
+        "icon": "$(question)"
       }
     ],
     "menus": {
@@ -572,11 +584,7 @@
     "viewsWelcome": [
       {
         "view": "datsumi.connections",
-        "contents": "Connect to a database to browse data and run queries.\n[Add Database Connection](command:datsumi.addConnection)"
-      },
-      {
-        "view": "datsumi.history",
-        "contents": "Run a query to see its SQL, database, time and status here. Select an entry to reopen it without executing. History is stored locally for this workspace."
+        "contents": "Every database. One workspace.\n[Add Database Connection](command:datsumi.addConnection)\n[Getting Started](command:datsumi.gettingStarted)\n[Help and Privacy](command:datsumi.help)"
       }
     ],
     "keybindings": [
@@ -775,7 +783,6 @@
     ],
     "configurationDefaults": {
       "[sql]": {
-        "editor.defaultFormatter": "philipp-manhart.datsumi",
         "editor.quickSuggestions": {
           "other": "on",
           "comments": "off",
@@ -798,6 +805,49 @@
         "id": "datsumi.connectionSettings",
         "label": "Connection Settings"
       }
+    ],
+    "walkthroughs": [
+      {
+        "id": "gettingStarted",
+        "title": "Get started with Datsumi",
+        "description": "Connect, query, copy and safely review changes in your editor.",
+        "steps": [
+          {
+            "id": "connect",
+            "title": "Add a database connection",
+            "description": "Use the single **+** in the Connections sidebar. Choose a database, test the connection, and decide whether credentials stay in this session or use secure storage.\n[Add Connection](command:datsumi.addConnection)",
+            "completionEvents": [
+              "onCommand:datsumi.addConnection"
+            ]
+          },
+          {
+            "id": "query",
+            "title": "Write and run a query",
+            "description": "Select your connection and open a native query editor. Use **Ctrl/Cmd+Enter** to run it. Results appear in the bottom Query Results panel.\n[New Query](command:datsumi.newQuery)",
+            "completionEvents": [
+              "onCommand:datsumi.runQuery"
+            ]
+          },
+          {
+            "id": "copy",
+            "title": "Copy clean data into a spreadsheet",
+            "description": "Focus the results grid. **Ctrl/Cmd+A**, then **Ctrl/Cmd+C** copies all available data across pages. Add **Shift** when selecting to include column names. Types and statistics stay out of the clipboard. Large results have explicit memory limits.\n[Read the guide](command:datsumi.help)"
+          },
+          {
+            "id": "edit",
+            "title": "Review edits before committing",
+            "description": "Open a keyed table, edit cells, choose **Review SQL**, then **Commit changes** and confirm. Nothing is written while staging. Read-only reasons appear beside the grid. If a commit outcome is unknown, disconnect and inspect fresh rows before trying again.\n[Help and Privacy](command:datsumi.help)"
+          },
+          {
+            "id": "customize",
+            "title": "Choose your editor and privacy settings",
+            "description": "Keep your existing SQL formatter or explicitly choose Datsumi. History is local and unencrypted; persisted draft recovery is opt-in.\n[SQL Editor Settings](command:datsumi.configureSqlEditor)\n[Help and Privacy](command:datsumi.help)",
+            "completionEvents": [
+              "onCommand:datsumi.configureSqlEditor"
+            ]
+          }
+        ]
+      }
     ]
   },
   "activationEvents": [
@@ -808,6 +858,7 @@
     "workspace"
   ],
   "icon": "resources/datsumi.png",
+  "preview": true,
   "engines": {
     "vscode": "^1.138.0"
   },

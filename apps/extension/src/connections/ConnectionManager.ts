@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { stat, rename, rm } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { basename } from "node:path";
 
 import type {
@@ -30,6 +30,7 @@ import {
 } from "@datsumi/driver-sql/configuration";
 import type { ExtensionContext } from "vscode";
 
+import { atomicOutput } from "../data/outputFile";
 import { abortCancellation } from "./cancellation";
 import type { CredentialService, CredentialAnswer } from "./CredentialService";
 import { parseSshConfiguration, type ManagedTunnel, type TunnelFactory } from "./SshTunnel";
@@ -89,6 +90,7 @@ function isProfile(value: unknown): value is ConnectionProfile {
 
 /** Owns profiles and sessions. VS Code storage stays in the workspace's extension host. */
 export class ConnectionManager {
+  private readonly uncertainWrites = new Set<string>();
   private profiles: ConnectionProfile[];
   private readonly sessions = new Map<string, Promise<OpenConnection>>();
   private disposed = false;
@@ -373,6 +375,7 @@ export class ConnectionManager {
     });
   }
   async disconnect(id: string): Promise<void> {
+    this.uncertainWrites.delete(id);
     const alreadySuspended = this.suspended.has(id);
     this.suspended.add(id);
     try {
@@ -411,7 +414,7 @@ export class ConnectionManager {
     });
   }
   async changeData(id: string, request: import("@datsumi/core").DataChange, apply: boolean) {
-    return this.operation(id, async (driver, session) => {
+    return this.mutation(id, apply, async (driver, session) => {
       if (!driver.changeData) throw new Error("Document/key editing unavailable.");
       return driver.changeData(session, request, apply);
     });
@@ -451,11 +454,44 @@ export class ConnectionManager {
     );
   }
   async changeRows(id: string, request: TableChanges, apply: boolean, signal?: DriverCancellation) {
-    return this.operation(
+    return this.mutation(
       id,
+      apply,
       async (driver, session) => {
         if (!driver.changeRows) throw new Error("Row editing unavailable.");
         return driver.changeRows(session, request, apply, signal);
+      },
+      signal,
+    );
+  }
+  private async mutation<T>(
+    id: string,
+    apply: boolean,
+    action: (driver: DatabaseDriver, session: unknown) => Promise<T>,
+    signal?: DriverCancellation,
+  ): Promise<T> {
+    if (this.uncertainWrites.has(id))
+      throw new Error(
+        "Write outcome unknown. Disconnect, reconnect and inspect fresh rows before reviewing changes again.",
+      );
+    return this.operation(
+      id,
+      async (driver, session) => {
+        try {
+          return await action(driver, session);
+        } catch (error) {
+          if (
+            apply &&
+            (driver.isConnected?.(session) === false ||
+              /outcome unknown|rollback could not be confirmed/i.test(String(error)))
+          ) {
+            this.uncertainWrites.add(id);
+            throw new Error(
+              "Write outcome unknown. The server may have applied changes. Disconnect, reconnect and inspect fresh rows before reviewing a new batch. Do not retry blindly.",
+            );
+          }
+          throw error;
+        }
       },
       signal,
     );
@@ -488,21 +524,16 @@ export class ConnectionManager {
   async exportTable(id: string, request: TableExport, signal?: DriverCancellation) {
     const { driver, session } = await this.open(id);
     if (!driver.exportTable) throw new Error("Table export is unavailable for this driver.");
-    await this.validateOutputDestination(request.path);
-    const temporary = `${request.path}.datsumi-${randomUUID()}.tmp`;
     try {
-      const count = await driver.exportTable(
-        session,
-        {
-          ...request,
-          path: temporary,
+      return await atomicOutput(
+        request.path,
+        (path) => {
+          if (signal?.isCancellationRequested) throw new Error("Export cancelled.");
+          return this.validateOutputDestination(path);
         },
-        signal,
+        (temporary) => driver.exportTable!(session, { ...request, path: temporary }, signal),
       );
-      await rename(temporary, request.path);
-      return count;
     } finally {
-      await rm(temporary, { force: true });
       if (driver.isConnected?.(session) === false) {
         const current = await this.sessions.get(id)?.catch(() => undefined);
         await current?.tunnel?.close();

@@ -169,7 +169,10 @@ export function registerConnectionCommands({
     await connections.validateOutputDestination(destination.fsPath);
     await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: "Backing up SQLite" },
-      async () => backupSqlite(String(profile.configuration.path), destination.fsPath),
+      async () =>
+        backupSqlite(String(profile.configuration.path), destination.fsPath, (path) =>
+          connections.validateOutputDestination(path),
+        ),
     );
     void vscode.window.showInformationMessage("SQLite backup completed.");
   });

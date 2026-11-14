@@ -121,9 +121,9 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
             const result =
               message.scope === "page" ? this.store.state().result : this.store.snapshot();
             if (result?.kind === "table")
-              void saveResult(result, message.format, "query result").catch((error) =>
-                vscode.window.showErrorMessage(String(error)),
-              );
+              void saveResult(result, message.format, "query result", (path) =>
+                this.connections.validateOutputDestination(path),
+              ).catch((error) => vscode.window.showErrorMessage(String(error)));
             return;
           }
           case "query/search":
@@ -146,13 +146,29 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
     message: Extract<import("@datsumi/protocol").WebviewRequest, { type: "query/copy" }>,
   ): Promise<void> {
     try {
-      const text = this.store.copy(
-        message.resultId,
-        message.columns,
-        message.headers,
-        message.format,
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Datsumi: Preparing clipboard",
+          cancellable: true,
+        },
+        async (_progress, token) => {
+          // Yield before serialization so the progress UI and cancellation can be delivered.
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (token.isCancellationRequested)
+            throw new Error("Copy cancelled. The clipboard was unchanged.");
+          const text = this.store.copy(
+            message.resultId,
+            message.columns,
+            message.headers,
+            message.format,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (token.isCancellationRequested)
+            throw new Error("Copy cancelled. The clipboard was unchanged.");
+          await vscode.env.clipboard.writeText(text);
+        },
       );
-      await vscode.env.clipboard.writeText(text);
     } catch (error) {
       void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));
     }
@@ -455,6 +471,8 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
         }
       }
     } catch (error) {
+      if (message.type === "table/changes" && message.apply)
+        this.store.editState(entry.id, entry.staged ?? [], []);
       this.store.fail(entry.id, error instanceof Error ? error.message : String(error));
     } finally {
       this.running = false;
@@ -569,8 +587,8 @@ export class QueryResultsViewProvider implements vscode.WebviewViewProvider, vsc
     const entry = this.store.editTarget();
     return `result:${entry?.connectionId}:${entry?.info?.resourceId ?? (entry?.result?.kind === "table" ? entry.result.columns.join(":") : "value")}`;
   }
-  hasPendingEdits(): boolean {
-    return this.store.hasEdits();
+  hasPendingEdits(connectionId?: string): boolean {
+    return this.store.hasEdits(connectionId);
   }
   refreshSettings(): void {
     this.send();

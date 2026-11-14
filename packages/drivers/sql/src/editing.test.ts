@@ -90,3 +90,17 @@ describe("staged edit transaction boundaries", () => {
     expect(run.mock.calls.filter((call) => call[0].startsWith("UPDATE"))).toHaveLength(1);
   });
 });
+
+it("never retries after COMMIT acknowledgement is lost, even if rollback might appear successful", async () => {
+  const { db, run, close } = fixture("postgres");
+  run.mockImplementation(async (text) => {
+    if (text === "COMMIT") throw new Error("connection reset after server commit");
+    return [{ columns: [], rows: [], affected: 1, truncated: false }];
+  });
+  await expect(db.changes(request, true)).rejects.toThrow("Write outcome unknown");
+  await expect(db.changes(request, true)).rejects.toThrow("Write outcome unknown");
+  await expect(db.changes(request, false)).rejects.toThrow("Write outcome unknown");
+  expect(close).toHaveBeenCalledOnce();
+  expect(run.mock.calls.filter(([text]) => text.startsWith("UPDATE"))).toHaveLength(1);
+  expect(run.mock.calls.some(([text]) => text === "ROLLBACK")).toBe(false);
+});

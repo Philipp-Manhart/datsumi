@@ -179,25 +179,29 @@ export function activate(context: ExtensionContext): void {
     days: vscode.workspace.getConfiguration("datsumi").get("drafts.retentionDays", 7),
   }));
   if (!userSetting("drafts.recoveryEnabled", false)) void drafts.clear().catch(() => {});
-  const history = new QueryHistory(context, (id) => {
-    const profile = connections.all().find((item) => item.id === id);
-    if (!profile) return undefined;
-    const config = profile.configuration;
-    const database =
-      typeof config.database === "string"
-        ? config.database
-        : typeof config.path === "string"
-          ? basename(config.path)
-          : typeof config.endpoint === "string"
-            ? new URL(config.endpoint).pathname.replace(/^\//, "")
-            : "";
-    return {
-      connectionName: connections.displayName(id),
-      environment: connections.viewText(`environment:${id}`),
-      driverId: profile.driverId,
-      ...(database ? { database } : {}),
-    };
-  });
+  const history = new QueryHistory(
+    context,
+    (id) => {
+      const profile = connections.all().find((item) => item.id === id);
+      if (!profile) return undefined;
+      const config = profile.configuration;
+      const database =
+        typeof config.database === "string"
+          ? config.database
+          : typeof config.path === "string"
+            ? basename(config.path)
+            : typeof config.endpoint === "string"
+              ? new URL(config.endpoint).pathname.replace(/^\//, "")
+              : "";
+      return {
+        connectionName: connections.displayName(id),
+        environment: connections.viewText(`environment:${id}`),
+        driverId: profile.driverId,
+        ...(database ? { database } : {}),
+      };
+    },
+    (path) => connections.validateOutputDestination(path),
+  );
   const historyTree = new QueryHistoryTreeProvider(history, (id) =>
     connections.all().some((profile) => profile.id === id),
   );
@@ -389,10 +393,13 @@ export function activate(context: ExtensionContext): void {
     setActive,
     refresh: () => tree.refresh(),
     hasPendingEdits: (id) =>
-      queryResults.hasPendingEdits() ||
-      [...panels].some((panel) => panel.connectionId === id && panel.hasPendingEdits()),
+      queryResults.hasPendingEdits(id) ||
+      [...panels, ...dataPanels].some(
+        (panel) => panel.connectionId === id && panel.hasPendingEdits(),
+      ),
     changed: (id) => {
-      for (const panel of [...panels]) if (panel.connectionId === id) panel.dispose();
+      for (const panel of [...panels, ...dataPanels])
+        if (panel.connectionId === id) panel.dispose();
       queryResults.clearConnection(id);
       sql.invalidate(id);
     },
@@ -751,6 +758,32 @@ export function activate(context: ExtensionContext): void {
       tree.refresh();
     }
   });
+  register("datsumi.gettingStarted", () =>
+    vscode.commands.executeCommand(
+      "workbench.action.openWalkthrough",
+      "philipp-manhart.datsumi#gettingStarted",
+      false,
+    ),
+  );
+  register("datsumi.help", async () => {
+    const selected = await vscode.window.showQuickPick(
+      [
+        { label: "Getting started", file: "GETTING-STARTED.md" },
+        { label: "Settings", file: "SETTINGS.md" },
+        { label: "Supported databases and limitations", file: "SUPPORT-MATRIX.md" },
+        { label: "Connection troubleshooting", file: "CONNECTIONS.md" },
+        { label: "Privacy and local storage", file: "PRIVACY.md" },
+        { label: "Security reporting", file: "SECURITY.md" },
+        { label: "Support", file: "SUPPORT.md" },
+      ],
+      { title: "Datsumi help — available offline" },
+    );
+    if (selected)
+      await vscode.window.showTextDocument(
+        vscode.Uri.joinPath(context.extensionUri, selected.file),
+        { preview: true },
+      );
+  });
   register("datsumi.formatSql", () => sql.formatEditor());
   register("datsumi.configureSqlEditor", async () => {
     const document = vscode.window.activeTextEditor?.document;
@@ -908,9 +941,30 @@ export function activate(context: ExtensionContext): void {
     setActive(node.connectionId);
     await results(node.connectionId, node.resource.label, node.resource.id).loadPage();
   });
+  async function confirmConnectionClose(id: string, remove = false): Promise<boolean> {
+    const pending =
+      queryResults.hasPendingEdits(id) ||
+      [...panels, ...dataPanels].some(
+        (panel) => panel.connectionId === id && panel.hasPendingEdits(),
+      );
+    const transaction = await connections.transactionState(id);
+    if (!remove && !pending && !["open", "failed", "manual"].includes(transaction)) return true;
+    const action = remove ? "Remove connection" : "Disconnect";
+    return (
+      (await vscode.window.showWarningMessage(
+        `${action} ${connections.displayName(id)}?`,
+        {
+          modal: true,
+          detail:
+            "Views will close. Save pending drafts first if you need them. Uncommitted server transactions are normally rolled back on disconnect; an interrupted COMMIT may already have succeeded. Inspect fresh data before retrying writes.",
+        },
+        action,
+      )) === action
+    );
+  }
   register("datsumi.disconnect", async (node?: ConnectionsTreeNode) => {
     const id = await chooseConnection(node);
-    if (!id) return;
+    if (!id || !(await confirmConnectionClose(id))) return;
     for (const panel of dataPanels)
       if (panel.connectionId === id) {
         panel.dispose();
@@ -929,7 +983,7 @@ export function activate(context: ExtensionContext): void {
   });
   register("datsumi.removeConnection", async (node?: ConnectionsTreeNode) => {
     const id = await chooseConnection(node);
-    if (!id) return;
+    if (!id || !(await confirmConnectionClose(id, true))) return;
     for (const panel of dataPanels)
       if (panel.connectionId === id) {
         panel.dispose();

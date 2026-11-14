@@ -5,6 +5,7 @@ import { BSON, MongoClient, type Document, type FindCursor } from "mongodb";
 
 import type { NoSqlConfiguration } from "./configuration";
 import type { NoSqlDatabase } from "./worker";
+import { confirmedWrite } from "./writeOutcome";
 const stringify = (value: unknown) => BSON.EJSON.stringify(value, { relaxed: false });
 function object(text: string): Document {
   const value: unknown = BSON.EJSON.parse(text, { relaxed: false });
@@ -143,9 +144,11 @@ export async function connectMongo(
       const collection = validateResource(request.resource);
       const preview = `Replace document ${request.id} in ${request.resource}, only if the complete original still matches.\n${stringify(next)}`;
       if (!apply) return preview;
-      const result = await collection.replaceOne(
-        { _id: original._id, $expr: { $eq: ["$$ROOT", { $literal: original }] } },
-        next,
+      const result = await confirmedWrite(() =>
+        collection.replaceOne(
+          { _id: original._id, $expr: { $eq: ["$$ROOT", { $literal: original }] } },
+          next,
+        ),
       );
       if (Number(result.matchedCount) !== 1)
         throw new Error(

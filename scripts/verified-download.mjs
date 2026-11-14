@@ -6,13 +6,17 @@ export async function verifiedDownload({
   url,
   sha256,
   maxBytes,
+  timeoutMs = 120000,
   directory = join(homedir(), ".cache", "datsumi", "verified-artifacts"),
 }) {
   if (
     !/^[a-f0-9]{64}$/.test(sha256) ||
     !Number.isSafeInteger(maxBytes) ||
     maxBytes < 1 ||
-    maxBytes > 128 * 1024 * 1024
+    maxBytes > 512 * 1024 * 1024 ||
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs < 1 ||
+    timeoutMs > 600000
   )
     throw new Error("Invalid pinned artifact metadata.");
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -48,7 +52,7 @@ export async function verifiedDownload({
   const source = new URL(url);
   if (source.protocol !== "https:" || source.username || source.password)
     throw new Error("Verified downloads require HTTPS without credentials.");
-  const signal = AbortSignal.timeout(120000);
+  const signal = AbortSignal.timeout(timeoutMs);
   let current = new URL(url);
   let response;
   for (let redirects = 0; ; redirects++) {

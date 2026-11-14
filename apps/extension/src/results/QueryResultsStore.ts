@@ -19,6 +19,7 @@ interface Entry {
   busy: boolean;
   error: string | null;
   result: WebviewResponse["result"];
+  resultBytes: number;
   info?: WebviewResponse["tableInfo"];
   schema?: WebviewResponse["schema"];
   editingReason?: string;
@@ -46,6 +47,8 @@ export class QueryResultsStore {
   private activeId: string | null = null;
   private sequence = 0;
 
+  constructor(private readonly retainedByteBudget = 128 * 1024 * 1024) {}
+
   begin(connectionId: string, connectionName: string, query: string, reuse = false): string {
     const current = reuse ? this.find(this.activeId ?? "") : undefined;
     const replace =
@@ -71,6 +74,7 @@ export class QueryResultsStore {
       busy: true,
       error: null,
       result: null,
+      resultBytes: 0,
       offset: 0,
       limit: 100,
       sort: null,
@@ -84,7 +88,19 @@ export class QueryResultsStore {
   complete(id: string, result: QueryResult): void {
     const entry = this.find(id);
     if (!entry) return;
+    const bytes = new TextEncoder().encode(JSON.stringify(result)).byteLength;
+    const retained = this.entries.reduce(
+      (total, item) => total + (item === entry ? 0 : item.resultBytes),
+      0,
+    );
+    if (retained + bytes > this.retainedByteBudget) {
+      entry.busy = false;
+      throw new Error(
+        "Retained results exceed the 128 MiB serialized-data budget. Close result tabs or narrow the query. Other result tabs and drafts were kept; the query was not replayed.",
+      );
+    }
     entry.result = queryResultSchema.parse(result);
+    entry.resultBytes = bytes;
     entry.busy = false;
     entry.sortedRows = undefined;
   }
@@ -231,8 +247,10 @@ export class QueryResultsStore {
       );
     return text;
   }
-  hasEdits(): boolean {
-    return this.entries.some((entry) => entry.staged?.length);
+  hasEdits(connectionId?: string): boolean {
+    return this.entries.some(
+      (entry) => (!connectionId || entry.connectionId === connectionId) && entry.staged?.length,
+    );
   }
   stage(id: string, changes: readonly import("@datsumi/core").RowChange[]): void {
     const entry = this.find(id);

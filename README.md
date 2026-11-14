@@ -53,3 +53,5 @@ Before publishing run the explicit local [release checklist](docs/release-checkl
 ## License
 
 Datsumi's own code, documentation and original logo are [MIT](LICENSE). Bundled dependencies and assets retain their own licenses and required notices. Database server/container licenses are separate; servers are not distributed in the extension.
+
+Preview acceptance and installation/upgrade/platform checks are tracked in [launch acceptance](docs/launch-acceptance.md). The native **Datsumi: Help and Privacy…** command opens bundled offline guides.

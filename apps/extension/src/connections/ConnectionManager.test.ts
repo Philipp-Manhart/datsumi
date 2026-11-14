@@ -182,3 +182,34 @@ it("duplicates local settings into a distinct disconnected profile without openi
   expect(f.driver.connect).toHaveBeenCalledTimes(before);
   await f.manager.dispose();
 });
+
+it("blocks staged retries after a disconnected write until an explicit disconnect", async () => {
+  const { manager, driver } = fixture();
+  const changeRows = vi.fn<NonNullable<DatabaseDriver["changeRows"]>>(
+    async (session, _request, apply) => {
+      if (apply) {
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- The fixture's driver session is controlled here.
+        (session as { closed: boolean }).closed = true;
+        throw new Error("connection lost after a write");
+      }
+      return ["UPDATE fixture SET note=?"];
+    },
+  );
+  Object.assign(driver, { changeRows });
+  const profile = await manager.addSqlite("/tmp/write-outcome.sqlite", false);
+  const request = {
+    resourceId: "items",
+    changes: [{ kind: "insert" as const, values: { id: 1 } }],
+  };
+  await expect(manager.changeRows(profile.id, request, true)).rejects.toThrow(
+    "Write outcome unknown",
+  );
+  await expect(manager.changeRows(profile.id, request, false)).rejects.toThrow(
+    "Write outcome unknown",
+  );
+  expect(changeRows).toHaveBeenCalledOnce();
+  await manager.disconnect(profile.id);
+  await expect(manager.changeRows(profile.id, request, false)).resolves.toHaveLength(1);
+  expect(changeRows).toHaveBeenCalledTimes(2);
+  await manager.dispose();
+});

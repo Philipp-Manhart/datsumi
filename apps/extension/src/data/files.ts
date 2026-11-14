@@ -1,9 +1,10 @@
-import { stat, readFile, writeFile } from "node:fs/promises";
+import { stat, readFile } from "node:fs/promises";
 import { extname } from "node:path";
 
 import type { QueryResult, RowChange, TableInfo } from "@datsumi/core";
 import * as vscode from "vscode";
 
+import { writeOutput, type OutputValidator } from "./outputFile";
 import { parseCsv, serializeResult } from "./serialization";
 
 type Table = Extract<QueryResult, { kind: "table" }>;
@@ -11,6 +12,7 @@ export async function saveResult(
   result: Table,
   format: "csv" | "json",
   title: string,
+  validate: OutputValidator,
 ): Promise<void> {
   if (
     result.truncated ||
@@ -32,14 +34,14 @@ export async function saveResult(
   }
   const file = await exportPath(title, format);
   if (file)
-    await writeFile(
+    await writeOutput(
       file,
       serializeResult(
         result,
         format,
         vscode.workspace.getConfiguration("datsumi").get("export.spreadsheetSafe", false),
       ),
-      { encoding: "utf8", mode: 0o600 },
+      validate,
     );
 }
 export async function exportPath(
@@ -51,6 +53,8 @@ export async function exportPath(
     filters: { [format.toUpperCase()]: [format] },
     saveLabel: "Export",
   });
+  if (file && file.scheme !== "file" && !(vscode.env.remoteName && file.scheme === "vscode-remote"))
+    throw new Error("Choose a file on the extension host.");
   return file
     ? extname(file.fsPath).toLowerCase() === `.${format}`
       ? file.fsPath

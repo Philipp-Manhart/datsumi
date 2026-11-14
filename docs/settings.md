@@ -1,6 +1,6 @@
 # Customizing Datsumi
 
-Open **Settings**, search `@ext:philipp-manhart.datsumi`, or search `Datsumi`. Settings are grouped into Results, SQL Editor, History & Privacy, Connections, Export and Advanced. VS Code's theme, editor font and native SQL editor settings remain authoritative; there is no second theme/font system.
+Open **Settings**, search `@ext:philipp-manhart.datsumi`, or search `Datsumi`. Settings are grouped into Results, SQL Editor, History & Privacy, Connections, Export and Advanced. Datsumi leaves the existing default SQL formatter intact until you explicitly choose **SQL Editor Settings**. VS Code's theme, editor font and native SQL editor settings remain authoritative; there is no second theme/font system.
 
 | Setting                                     | Default     | Effect                                                                                                                                |
 | ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |

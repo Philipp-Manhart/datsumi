@@ -407,6 +407,10 @@ export class ResultsPanel implements vscode.Disposable {
             this.actions?.changed();
           }
         });
+        if (message.apply && this.state.error) {
+          this.state = { ...this.state, previewSql: [] };
+          this.send();
+        }
         if (applied && !this.state.error) {
           this.state = { ...this.state, previewSql: [] };
           await this.loadPage(this.state.page?.offset, this.state.page?.limit);
@@ -527,7 +531,9 @@ export class ResultsPanel implements vscode.Disposable {
               void vscode.window.showInformationMessage(`Exported ${count.toLocaleString()} rows.`);
             });
         } else if (this.state.result?.kind === "table")
-          await saveResult(this.state.result, message.format, this.state.title);
+          await saveResult(this.state.result, message.format, this.state.title, (path) =>
+            this.connections.validateOutputDestination(path),
+          );
         break;
       default:
         break;

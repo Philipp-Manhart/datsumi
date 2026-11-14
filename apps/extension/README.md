@@ -8,9 +8,9 @@ A focused database client inside VS Code: connect, browse, query, inspect relati
 
 ## Start
 
-Install a Datsumi VSIX using **Extensions → … → Install from VSIX**. Open Datsumi in the Activity Bar and use the single **+ → Add Database Connection**. Enter a database file or server details, test, then connect. Optional drivers install automatically; npm is not required. Credentials remain separate from profiles and can use VS Code SecretStorage.
+This release is a preview. Install a Datsumi VSIX using **Extensions → … → Install from VSIX**. Open Datsumi in the Activity Bar and use the single **+ → Add Database Connection**. Enter a database file or server details, test, then connect. Optional drivers install automatically; npm is not required. Credentials remain separate from profiles and can use VS Code SecretStorage.
 
-Use a table/collection/key to browse data, or **New Query → Ctrl/Cmd+Enter**. Results appear in the bottom **Query Results** panel. The sidebar's collapsed **History** view lists previous queries and their database. SQL completion/formatting use the selected connection.
+Use a table/collection/key to browse data, or **New Query → Ctrl/Cmd+Enter**. Results appear in the bottom **Query Results** panel. The sidebar's collapsed **History** view lists previous queries and their database. SQL completion/formatting use the selected connection. Your default formatter stays unchanged; use **Format SQL** directly or explicitly choose **SQL Editor Settings**.
 
 For SQL grid edits: **stage cells/rows → Review SQL → Commit changes → native confirmation**. Conflicts roll back supported transactional batches. Server captures require a complete schema-qualified single-table SELECT *; views, unsafe/ambiguous targets and shortened originals stay protected. ClickHouse grids are read-only. MongoDB/Redis use their reviewed document/key workflows.
 
@@ -28,6 +28,16 @@ SQLite, DuckDB, PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, ClickHouse, Mong
 - Schema relationships, foreign-key navigation, SQL completion/formatting, history/favorites and native SQL files.
 - Connection edit/duplicate, SSH tunneling with host-key trust, verified TLS, environment labels and redacted diagnostics.
 - SQLite create/open and online backup. Pending table drafts can be saved to a file; optional local reload recovery is off by default and never auto-applies.
+
+Use **Datsumi: Getting Started** for the native walkthrough and **Datsumi: Help and Privacy…** for guides bundled with the extension, available offline.
+
+## In VS Code
+
+![Native SQL editor with query results in the bottom panel](media/query-results.png)
+
+![Foreign-key relationships between tables](media/relationships.png)
+
+Screenshots use synthetic data in an isolated installed-extension test profile.
 
 ## Customize
 

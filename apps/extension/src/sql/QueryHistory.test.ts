@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const { pick, copy, config } = vi.hoisted(() => ({
+const { pick, copy, save, config } = vi.hoisted(() => ({
   pick: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  save: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   copy: vi.fn<(text: string) => Promise<void>>(),
   config: { enabled: true, disabled: [] as string[], overrides: {} as Record<string, unknown> },
 }));
@@ -53,7 +54,11 @@ vi.mock("vscode", () => ({
               : fallback,
     }),
   },
-  window: { showQuickPick: pick, showWarningMessage: vi.fn<(text: string) => void>() },
+  window: {
+    showSaveDialog: save,
+    showQuickPick: pick,
+    showWarningMessage: vi.fn<(text: string) => void>(),
+  },
   env: { clipboard: { writeText: copy } },
 }));
 import type { ExtensionContext } from "vscode";
@@ -211,4 +216,20 @@ it("does not retain production query text unless explicitly enabled", () => {
   config.overrides["history.recordProduction"] = true;
   history.record("db", "explicitly opted in", 1);
   expect(history.all()).toHaveLength(1);
+});
+
+it("history Save as file validates database destinations instead of writing through workspace.fs", async () => {
+  const { context } = fixture();
+  const guard = vi.fn<(path: string) => Promise<void>>(async (_path) => {
+    throw new Error("Protected database");
+  });
+  const history = new QueryHistory(context, undefined, guard);
+  history.record("db", "SELECT 1", 1);
+  pick
+    .mockResolvedValueOnce("All queries")
+    .mockImplementationOnce(async (items) => (items as { entry: unknown }[])[0])
+    .mockResolvedValueOnce("Save as file");
+  save.mockResolvedValueOnce({ scheme: "file", fsPath: "/tmp/datsumi-protected-history.sql" });
+  await expect(history.pick("db", true)).rejects.toThrow("Protected database");
+  expect(guard).toHaveBeenCalledOnce();
 });

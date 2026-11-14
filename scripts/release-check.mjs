@@ -110,6 +110,9 @@ try {
     "scripts/verify-package.py",
     `apps/extension/datsumi-${manifest.version}.vsix`,
   ]);
+  run("bun", ["run", "test:installed"]);
+  run("bun", ["run", "test:minimum"]);
+  run("bun", ["run", "benchmark:results"]);
   report.releaseReady =
     !dirty &&
     !execFileSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" }).trim() &&

@@ -3,6 +3,7 @@ import { createClient, RESP_TYPES } from "redis";
 
 import type { NoSqlConfiguration } from "./configuration";
 import type { NoSqlDatabase } from "./worker";
+import { confirmedWrite } from "./writeOutcome";
 const stringCas = `if redis.call('TYPE', KEYS[1]).ok ~= 'string' or redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end redis.call('SET', KEYS[1], ARGV[2], 'KEEPTTL') return 1`;
 const hashCas = `
 if redis.call('TYPE', KEYS[1]).ok ~= 'hash' then return 0 end
@@ -162,10 +163,12 @@ export async function connectRedis(
       }
       if (!apply)
         return `Update ${current.type} key ${JSON.stringify(request.id)} only if the original value still matches. Existing TTL is preserved.\n${request.text}`;
-      const result = await client.eval(current.type === "string" ? stringCas : hashCas, {
-        keys: [request.id],
-        arguments: [request.original, request.text],
-      });
+      const result = await confirmedWrite(() =>
+        client.eval(current.type === "string" ? stringCas : hashCas, {
+          keys: [request.id],
+          arguments: [request.original, request.text],
+        }),
+      );
       if (result !== 1)
         throw new Error(
           "Key changed, expired, or was removed. Nothing was overwritten; refresh and compare.",

@@ -21,7 +21,7 @@
     },
     "apps/extension": {
       "name": "datsumi",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@datsumi/core": "workspace:*",
         "@datsumi/driver-api": "workspace:*",

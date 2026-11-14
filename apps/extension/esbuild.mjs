@@ -11,6 +11,22 @@ import { writeLicenses } from "../../scripts/licenses.mjs";
 await import("../../packages/drivers/sql/build.mjs");
 await mkdir("dist/drivers", { recursive: true });
 await copyFile("../../LICENSE", "LICENSE");
+for (const [source, target] of [
+  ["PRIVACY.md", "PRIVACY.md"],
+  ["SECURITY.md", "SECURITY.md"],
+  ["docs/security-audit.md", "SECURITY-AUDIT.md"],
+  ["SUPPORT.md", "SUPPORT.md"],
+  ["docs/settings.md", "SETTINGS.md"],
+  ["docs/support-matrix.md", "SUPPORT-MATRIX.md"],
+  ["docs/connection-troubleshooting.md", "CONNECTIONS.md"],
+  ["docs/getting-started.md", "GETTING-STARTED.md"],
+]) {
+  const text = (await readFile(`../../${source}`, "utf8"))
+    .replaceAll("(docs/support-matrix.md)", "(SUPPORT-MATRIX.md)")
+    .replaceAll("(docs/connection-troubleshooting.md)", "(CONNECTIONS.md)")
+    .replaceAll("(docs/security-audit.md)", "(SECURITY-AUDIT.md)");
+  await writeFile(target, text);
+}
 const duckRequire = createRequire(
   new URL("../../packages/drivers/duckdb/package.json", import.meta.url),
 );

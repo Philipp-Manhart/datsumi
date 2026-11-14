@@ -10,7 +10,11 @@ path = Path(sys.argv[1])
 with zipfile.ZipFile(path) as archive:
     names = archive.namelist()
     manifest = json.loads(archive.read('extension/package.json'))
+    if manifest.get('preview'):
+        assert b'Microsoft.VisualStudio.Code.PreRelease' in archive.read('extension.vsixmanifest'), 'Preview must use the Marketplace pre-release channel'
     assert manifest['license'] == 'MIT', 'Project license must be MIT'
+    for document in ['PRIVACY.md','SECURITY.md','SUPPORT.md','SETTINGS.md','SUPPORT-MATRIX.md','CONNECTIONS.md','GETTING-STARTED.md']:
+        assert archive.read('extension/' + document), 'Missing offline help: ' + document
     license_file = next(name for name in names if re.fullmatch(r'extension/licen[sc]e(?:\.(?:txt|md))?', name, re.I))
     assert b'Permission is hereby granted' in archive.read(license_file)
     assert archive.read('extension/' + manifest['icon']).startswith(b'\x89PNG\r\n\x1a\n')

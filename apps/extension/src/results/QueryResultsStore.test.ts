@@ -218,3 +218,19 @@ describe("result tab names", () => {
     expect(store.state().title).toBe("Customer overview");
   });
 });
+
+it("bounds aggregate retained snapshots without dropping pinned results or replaying queries", () => {
+  const data = table(20);
+  const bytes = new TextEncoder().encode(JSON.stringify(data)).byteLength;
+  const store = new QueryResultsStore(bytes + 1);
+  const first = store.begin("db", "one.sqlite", "SELECT * FROM one");
+  store.complete(first, data);
+  store.pin(first, true);
+  const second = store.begin("db", "one.sqlite", "SELECT * FROM two");
+  expect(() => store.complete(second, data)).toThrow("Retained results");
+  store.select(first);
+  expect(store.copy(first, [0, 1], false, "tsv")).toContain("Row 20");
+  store.close(first);
+  store.complete(second, data);
+  expect(store.copy(second, [0], false, "tsv")).toContain("20");
+});

@@ -1,6 +1,6 @@
 const { writeFileSync } = require("node:fs");
 const assert = require("node:assert/strict");
-const { join } = require("node:path");
+const { join, relative, isAbsolute } = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 const vscode = require("vscode");
 const { addConnection } = require("./connection-form.cjs");
@@ -48,9 +48,20 @@ exports.run = async function () {
   if (headless) {
     // Only interaction with native Quick Pick dialogs is stubbed; extension commands and providers remain native.
     vscode.window.showQuickPick = async (items) => (await items)[0];
+    // Accept native confirmation actions deterministically; dedicated host-key tests replace this.
+    vscode.window.showWarningMessage = async (_message, ...args) =>
+      args.find((value) => typeof value === "string");
   }
   const extension = vscode.extensions.getExtension("philipp-manhart.datsumi");
-  assert.ok(extension, "Development extension is installed");
+  assert.ok(extension, "Datsumi extension is installed");
+  if (process.env.DATSUMI_TEST_INSTALLED_ROOT) {
+    const path = relative(process.env.DATSUMI_TEST_INSTALLED_ROOT, extension.extensionPath);
+    assert.ok(
+      !path.startsWith("..") && !isAbsolute(path),
+      "Loaded the installed VSIX, not the development target",
+    );
+    assert.equal(extension.packageJSON.version, process.env.DATSUMI_TEST_EXPECTED_VERSION);
+  }
   let historyProvider;
   let resultsProvider;
   const registerResults = vscode.window.registerWebviewViewProvider;
@@ -162,10 +173,15 @@ exports.run = async function () {
   await vscode.workspace
     .getConfiguration("editor")
     .update("defaultFormatter", "oxc.oxc-vscode", vscode.ConfigurationTarget.Global);
-  assert.equal(
+  assert.notEqual(
     editorSettings.get("defaultFormatter"),
     "philipp-manhart.datsumi",
-    "SQL-specific default overrides an inherited non-SQL formatter",
+    "Datsumi does not select itself as the SQL formatter without opting in",
+  );
+  assert.equal(
+    editorSettings.inspect("defaultFormatter").globalValue,
+    "oxc.oxc-vscode",
+    "The existing global formatter preference remains intact",
   );
   assert.equal(
     editorSettings.get("quickSuggestions").other,
