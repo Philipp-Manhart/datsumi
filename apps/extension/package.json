@@ -1,7 +1,7 @@
 {
   "name": "datsumi",
   "displayName": "Datsumi — Database Explorer",
-  "version": "0.3.1",
+  "version": "0.0.1",
   "private": true,
   "description": "A modern, unified database client for VS Code. Explore, query, and manage SQL and NoSQL databases without leaving your editor.",
   "categories": [

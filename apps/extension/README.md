@@ -47,7 +47,7 @@ Neon and Supabase connection presets reuse PostgreSQL support. Capabilities and 
 
 Results appear beside Terminal in the bottom panel. Query History is in the sidebar. **Datsumi: Getting Started** opens a short walkthrough; **Datsumi: Help and Privacy…** opens guides bundled with the extension, even offline.
 
-Before the first Marketplace release, install the `.vsix` from [GitHub Releases](https://github.com/Philipp-Manhart/datsumi/releases) through **Extensions → … → Install from VSIX…**.
+Install the preview from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=philipp-manhart.datsumi), or install a `.vsix` from [GitHub Releases](https://github.com/Philipp-Manhart/datsumi/releases) through **Extensions → … → Install from VSIX…**.
 
 ## Fits your workspace
 
