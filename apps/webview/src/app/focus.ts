@@ -8,7 +8,7 @@ export function focusOutside(container: HTMLElement, backwards = false): boolean
     (element) =>
       element.tabIndex >= 0 &&
       !element.matches(":disabled") &&
-      !element.closest("[hidden], [inert], dialog:not([open])") &&
+      !element.closest('[hidden], [inert], dialog:not([open]), [role="menu"]') &&
       getComputedStyle(element).visibility !== "hidden" &&
       (typeof element.checkVisibility !== "function" || element.checkVisibility()),
   );

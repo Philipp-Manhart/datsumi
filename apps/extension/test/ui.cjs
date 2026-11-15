@@ -115,6 +115,16 @@ exports.run = async () => {
     await wait('Boolean(document.querySelector("[role=menu]"))');
     await key("Escape", "Escape", 27);
     await wait('document.activeElement.getAttribute("role") === "grid"');
+    await key("F10", "F10", 121, 8);
+    await wait('Boolean(document.querySelector("[role=menu]"))');
+    await key("Tab", "Tab", 9);
+    await wait('!document.querySelector("[role=menu]")');
+    assert.equal(
+      await evaluate("document.activeElement.tagName === 'BODY'"),
+      false,
+      "Tab from a closing menu retains focus on a surviving control",
+    );
+    await evaluate('document.querySelector("[role=grid]").focus()');
     await key("End", "End", 35, 2);
     await key("Tab", "Tab", 9);
     assert.equal(

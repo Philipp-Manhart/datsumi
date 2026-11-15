@@ -138,6 +138,10 @@ try {
     !execFileSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" }).trim() &&
     execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim() ===
       report.commit;
+  if (!report.localChecksPassed && !allowDirty)
+    throw new Error(
+      "Source changed during validation; commit the final source and rerun the local gate.",
+    );
 } finally {
   report.finished = new Date().toISOString();
   await writeFile(join(output, "report.json"), JSON.stringify(report, null, 2) + "\n", {

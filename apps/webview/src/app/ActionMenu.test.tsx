@@ -58,3 +58,21 @@ it("supports arrow navigation and Escape focus restoration without swallowing in
   );
   expect(screen.getByRole("textbox")).toHaveFocus();
 });
+
+it("moves Tab past the closing menu instead of focusing an item that disappears", () => {
+  const close = vi.fn<() => void>();
+  const { rerender } = render(<button>Open</button>);
+  screen.getByText("Open").focus();
+  rerender(
+    <>
+      <button>Open</button>
+      <ActionMenu x={0} y={0} onClose={close}>
+        <button role="menuitem">First</button>
+      </ActionMenu>
+      <button>Next control</button>
+    </>,
+  );
+  fireEvent.keyDown(screen.getByText("First"), { key: "Tab" });
+  expect(close).toHaveBeenCalledOnce();
+  expect(screen.getByText("Next control")).toHaveFocus();
+});
