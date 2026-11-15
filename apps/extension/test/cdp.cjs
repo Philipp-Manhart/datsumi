@@ -85,6 +85,10 @@ exports.connect = async (port) => {
             );
           const session = attached.get(target.targetId);
           await call("Runtime.enable", {}, session);
+          // Desktop window activation is external to CDP. Keep the isolated page
+          // focused while exercising real DOM keys in headless/X11 sessions.
+          if (target.type === "page")
+            await call("Emulation.setFocusEmulationEnabled", { enabled: true }, session);
           for (const context of contexts.get(session) || []) {
             const reference = { session, contextId: context.id, frameId: context.auxData?.frameId };
             if (await evaluate(reference, expression)) return reference;

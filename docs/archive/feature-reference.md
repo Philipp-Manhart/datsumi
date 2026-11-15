@@ -32,7 +32,7 @@ This release connects to remote databases only. Embedded replicas/sync, local li
 
 ## Security
 
-See the [security policy](SECURITY.md) and [pre-publication audit](security-audit.md) for protections, fixes and limits. The [brand guide](brand.md) documents the identity and reusable logo assets.
+See the [security policy](../../SECURITY.md) and [pre-publication audit](security-audit.md) for protections, fixes and limits. The [brand guide](../brand.md) documents the identity and reusable logo assets.
 
 ## Try it
 
@@ -49,9 +49,9 @@ In VS Code, run **Terminal: Run Task → run:extension** to open an isolated Ext
 4. Press **Ctrl+Enter** / **⌘Enter**, click the editor's Run button, or run **Datsumi: Run SQL Query**. The selection runs when present; otherwise the statement at the cursor runs, including statements in a script.
 5. SQL results open in the **Query Results** panel alongside Terminal, Output, and Problems. Normal runs reuse the active unpinned result for the same connection, and the SQL editor keeps focus. Pin a result to preserve it, or use **Run Query in New Result** (**Ctrl/Cmd+Alt+Enter**) to create another tab (up to 10). Each result remembers its own page size, page position, and sort. Click a column header to cycle ascending, descending, and original order. Table browsing stays in editor tabs. Table browsing has Previous/Next, page size, and Refresh controls. The SQL editor status bar shows its database; click it to select another connection.
 
-For a disposable database to explore, run `bun run sample:db` and open [samples/playground.sqlite](../samples/playground.sqlite). [Sample queries and testing instructions](../samples/README.md) cover the SQLite workflow.
+For a disposable database to explore, run `bun run sample:db` and open [samples/playground.sqlite](../../samples/README.md). [Sample queries and testing instructions](../../samples/README.md) cover the SQLite workflow.
 
-For MongoDB and Redis sample servers, run `bun run sample:nosql`. Connection URLs, sample credentials, JSON query examples and reset commands are in [samples/README.md](../samples/README.md).
+For MongoDB and Redis sample servers, run `bun run sample:nosql`. Connection URLs, sample credentials, JSON query examples and reset commands are in [samples/README.md](../../samples/README.md).
 
 Connections are remembered per workspace using VS Code extension storage. Sessions reconnect lazily after a reload or disconnect. Browsing another database does not change an existing SQL editor's connection. **Remove Connection** removes the saved profile; it does not delete the database file.
 
@@ -65,7 +65,7 @@ Choose **Oracle** directly, entering the **service name** in the Database field.
 
 Oracle numbers are fetched as strings to preserve precision. Table browsing/export converts dates and timestamps on the server to preserve fractional seconds. Raw editor queries returning Oracle date/timestamp objects use JavaScript Date precision (milliseconds); select `TO_CHAR(your_timestamp, 'YYYY-MM-DD"T"HH24:MI:SS.FF9')` for full fractional precision. Large LOBs remain subject to capture/export limits.
 
-Provider URL/TLS/pooler contracts are tested, and both presets are exercised against a real TLS-enabled PostgreSQL server. Live Neon/Supabase accounts were not used. ClickHouse and Oracle are tested against disposable real servers and in the native VS Code host. See [testing details](testing.md).
+Provider URL/TLS/pooler contracts are tested, and both presets are exercised against a real TLS-enabled PostgreSQL server. Live Neon/Supabase accounts were not used. ClickHouse and Oracle are tested against disposable real servers and in the native VS Code host. See [testing details](../testing.md).
 
 ## Connect to a VPS through SSH (0.0.21)
 
@@ -83,7 +83,7 @@ SSH settings, key paths and agents belong to the **VS Code extension host**. Wit
 
 Current SSH scope is one hop with key/agent authentication. SSH passwords, interactive MFA, ProxyJump chains, OpenSSH config aliases, PuTTY PPK keys and automatic private-key passphrase storage are not provided. MongoDB tunnels use a direct `mongodb://` member connection with discovery disabled; SRV/discovery URLs are rejected. Redis Cluster/Sentinel and multi-endpoint database redirects need a different networking arrangement, commonly a VPN or Remote SSH. Oracle TCPS proxy settings have unit/transport tests; the real Oracle Docker fixture uses TCP, so a full Oracle TCPS deployment remains unverified.
 
-See [connection troubleshooting](connection-troubleshooting.md) for the other common connection hurdles.
+See [connection troubleshooting](../connection-troubleshooting.md) for the other common connection hurdles.
 
 ## Server connections and optional drivers
 
@@ -283,12 +283,12 @@ The standalone webview at `http://127.0.0.1:5173` uses clearly labeled sample da
 
 Datsumi has its own extension identity, `philipp-manhart.datsumi`. Re-add connections when switching from earlier development builds; saved credentials are not migrated between extension identities.
 
-See [the current product review](product-review.md) for focused next steps and remaining limits.
+See [the current product review](../product-review.md) for focused next steps and remaining limits.
 
-The server conformance runner needs Docker with Compose, OpenSSL, and access to official database images. It uses uniquely named disposable containers, loopback-only random ports, generated test certificates, and test-only credentials; cleanup targets only that run's containers/volumes. It covers persistent sessions, duplicate columns, schemas/foreign keys, paging/filter injection, stage/commit/conflicts, rollback, explicit transactions, CRUD, full values, export, precision, cancellation, TLS success/failure, and credential redaction. Native tests require a graphical VS Code installation; the `test:drivers:native` variant explicitly skips focus-dependent automatic popup tests while keeping native command/provider and credential checks. GitHub Actions workflows are intentionally not included. Run the local release checks in [Testing and maintenance](testing.md), including all database/native suites, the dependency audit and production packaging before publishing.
+The server conformance runner needs Docker with Compose, OpenSSL, and access to official database images. It uses uniquely named disposable containers, loopback-only random ports, generated test certificates, and test-only credentials; cleanup targets only that run's containers/volumes. It covers persistent sessions, duplicate columns, schemas/foreign keys, paging/filter injection, stage/commit/conflicts, rollback, explicit transactions, CRUD, full values, export, precision, cancellation, TLS success/failure, and credential redaction. Native tests require a graphical VS Code installation; the `test:drivers:native` variant explicitly skips focus-dependent automatic popup tests while keeping native command/provider and credential checks. GitHub Actions workflows are intentionally not included. Run the local release checks in [Testing and maintenance](../testing.md), including all database/native suites, the dependency audit and production packaging before publishing.
 
 For the focused native clipboard regression, build the extension and run `DATSUMI_TEST_CLIPBOARD_ONLY=1 node apps/extension/test/run.mjs`. It checks 12,001 SQLite rows across pages, header-only metadata, native clipboard TSV and no replay of writes with RETURNING. Only the webview transport is simulated; clipboard access, activation, SQL workers and commands are native. It restores the previous clipboard text when finished.
 
 ## Testing and maintenance
 
-Run `bun run test:all` for static checks, real database adapter tests, native VS Code connection tests for all twelve engines, and clipboard regression tests. See [the testing guide](testing.md) for prerequisites, individual commands, coverage and limitations.
+Run `bun run test:all` for static checks, real database adapter tests, native VS Code connection tests for all twelve engines, and clipboard regression tests. See [the testing guide](../testing.md) for prerequisites, individual commands, coverage and limitations.
