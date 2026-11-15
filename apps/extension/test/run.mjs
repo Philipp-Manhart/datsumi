@@ -5,8 +5,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { vscodeCommand } from "../../../scripts/vscode-command.mjs";
 import { startSshFixture } from "./ssh-fixture.mjs";
 
+const launcher = await vscodeCommand();
 const extension = fileURLToPath(new URL("../", import.meta.url));
 const directory = await mkdtemp(join(tmpdir(), "datsumi-vscode-"));
 const workspace = join(directory, "workspace");
@@ -31,8 +33,9 @@ try {
   if (clipboardOnX11) delete env.WAYLAND_DISPLAY;
   await new Promise((resolveRun, reject) => {
     const child = spawn(
-      process.env.VSCODE_EXECUTABLE || "code",
+      launcher.command,
       [
+        ...launcher.args,
         "--wait",
         "--new-window",
         ...(clipboardOnX11 ? ["--ozone-platform=x11"] : []),
@@ -46,7 +49,7 @@ try {
         `--extensionTestsPath=${join(extension, "test", process.env.DATSUMI_TEST_CLIPBOARD_ONLY === "1" ? "clipboard.cjs" : "smoke.cjs")}`,
         workspace,
       ],
-      { env, stdio: "inherit" },
+      { env: { ...env, ...launcher.env }, stdio: "inherit" },
     );
     child.on("error", reject);
     child.on("exit", (code) =>

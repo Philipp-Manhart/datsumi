@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 
+import { focusOutside } from "./focus";
+
 /** Shared mouse/keyboard menu with VS Code theme tokens and viewport-safe placement. */
 export function ActionMenu({
   x,
@@ -13,6 +15,8 @@ export function ActionMenu({
   onClose: () => void;
 }) {
   const menu = useRef<HTMLDivElement>(null);
+  const restoreFocus = useRef(true);
+  const invoker = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     const element = menu.current;
     if (!element) return;
@@ -32,19 +36,24 @@ export function ActionMenu({
   }, [x, y]);
   useEffect(() => {
     const previous = document.activeElement;
+    invoker.current = previous instanceof HTMLElement ? previous : null;
+    restoreFocus.current = true;
     menu.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     const outside = (event: PointerEvent) => {
       if (
         event.target instanceof Element &&
         !menu.current?.contains(event.target) &&
         !event.target.closest("[data-grid-menu-trigger]")
-      )
+      ) {
+        restoreFocus.current = false;
         onClose();
+      }
     };
     window.addEventListener("pointerdown", outside);
     return () => {
       window.removeEventListener("pointerdown", outside);
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+      if (restoreFocus.current && previous instanceof HTMLElement && previous.isConnected)
+        previous.focus();
     };
   }, [onClose]);
   return (
@@ -61,7 +70,13 @@ export function ActionMenu({
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape" || event.key === "Tab") {
+          event.preventDefault();
           event.stopPropagation();
+          if (event.key === "Tab" && invoker.current) {
+            invoker.current.focus();
+            focusOutside(invoker.current, event.shiftKey);
+            restoreFocus.current = false;
+          }
           onClose();
           return;
         }

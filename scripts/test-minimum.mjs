@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { verifiedDownload } from "./verified-download.mjs";
+import { vscodeCommand } from "./vscode-command.mjs";
 const pins = JSON.parse(await readFile(new URL("./test-runtimes.json", import.meta.url), "utf8"));
 const manifest = JSON.parse(
   await readFile(new URL("../apps/extension/package.json", import.meta.url), "utf8"),
@@ -32,7 +33,11 @@ try {
     DATSUMI_TEST_RUNTIME_LABEL: "minimum",
   };
   delete env.ELECTRON_RUN_AS_NODE;
-  const version = spawnSync(executable, ["--version"], { env, encoding: "utf8" });
+  const launcher = await vscodeCommand(executable);
+  const version = spawnSync(launcher.command, [...launcher.args, "--version"], {
+    env: { ...env, ...launcher.env },
+    encoding: "utf8",
+  });
   if (version.status !== 0 || version.stdout.split(/\r?\n/)[0] !== pins.version)
     throw new Error("The minimum-version test executable has the wrong VS Code version.");
   const result = spawnSync(process.execPath, ["apps/extension/test/package-run.mjs"], {

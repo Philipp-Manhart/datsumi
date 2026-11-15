@@ -83,7 +83,7 @@ export function Dropdown({
       <button
         ref={button}
         type="button"
-        disabled={disabled}
+        disabled={disabled || !options.length}
         role="combobox"
         className="vscode-dropdown"
         aria-label={label}

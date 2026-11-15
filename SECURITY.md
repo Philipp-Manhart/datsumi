@@ -4,7 +4,7 @@ Datsumi is a database client. Only run SQL/commands you trust, and use database 
 
 ## Reporting a vulnerability
 
-Report privately to the repository owner through GitHub's private vulnerability reporting when available: https://github.com/Philipp-Manhart/datsumi/security/advisories/new. If that feature is unavailable, open an issue requesting a private reporting contact without describing the vulnerability or including exploit details. The maintainer must enable and verify private reporting before a public release. Do not include credentials, private database contents or exploit details in a public issue.
+Use [GitHub private vulnerability reporting](https://github.com/Philipp-Manhart/datsumi/security/advisories/new). Please do not include vulnerability details, exploit steps, tokens or database contents in a public issue. If the reporting form is unavailable, do not disclose details publicly; the maintainer must restore a private reporting channel before publication. See PUBLISHING.md for the maintainer setup check.
 
 ## Protections
 
@@ -18,4 +18,4 @@ Report privately to the repository owner through GitHub's private vulnerability 
 
 Query text/history, copied data and exports may contain sensitive information and are not encrypted by Datsumi. History can be disabled or cleared. Raw CSV/TSV values are preserved; spreadsheet applications may interpret formula-like strings. Review untrusted data before opening it in a spreadsheet. Use read-only server accounts when writes must be prohibited; UI protections do not replace server permissions. Explicit plaintext database URLs are unencrypted. Secrets on a remote extension host depend on that host and VS Code's credential backend.
 
-See [the current support and validation matrix](docs/support-matrix.md), [privacy statement](PRIVACY.md), and [the historical release audit](docs/security-audit.md) for the scope and evidence of the pre-publication review. An automated or source review cannot guarantee the absence of vulnerabilities.
+See [the current support and validation matrix](docs/support-matrix.md), [privacy statement](PRIVACY.md), and [the historical release audit](docs/archive/security-audit.md) for the scope and evidence of the pre-publication review. An automated or source review cannot guarantee the absence of vulnerabilities.

@@ -26,6 +26,8 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "package:extension": "bun run --cwd apps/extension package",
+    "platform:check": "bun scripts/platform-audit.mjs",
+    "publication:check": "node scripts/publication-check.mjs",
     "release:check": "node scripts/release-check.mjs",
     "sample:db": "node samples/create-sample.mjs",
     "sample:duckdb": "node samples/create-duckdb.mjs",
@@ -47,6 +49,7 @@
     "test:nosql:native": "DATSUMI_TEST_NATIVE=1 node packages/drivers/nosql/test/run.mjs",
     "test:remote": "bun run build:drivers && node packages/drivers/sql/test/run-remote.mjs",
     "test:remote:native": "bun run --cwd apps/extension build && DATSUMI_TEST_NATIVE=1 node packages/drivers/sql/test/run-remote.mjs",
+    "test:ui": "node apps/extension/test/package-run.mjs --ui",
     "test:watch": "vitest",
     "typecheck": "turbo run typecheck"
   },

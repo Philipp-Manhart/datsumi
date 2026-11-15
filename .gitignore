@@ -38,3 +38,6 @@ apps/extension/SUPPORT-MATRIX.md
 apps/extension/CONNECTIONS.md
 apps/extension/GETTING-STARTED.md
 apps/extension/SECURITY-AUDIT.md
+
+# Local maintainer attestation; the example is safe to commit
+publication-approval.json

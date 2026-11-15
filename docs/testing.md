@@ -4,7 +4,7 @@ Run `bun run test:all` from the repository root for the complete suite. The SQL 
 
 GitHub Actions workflows are intentionally not included. Maintainers run the release checks locally before publishing; a green unit-test run alone does not replace the database and native suites.
 
-See [the publication follow-up](publication-follow-up-2026-11-11.md) for implemented safety changes and remaining platform/provider acceptance checks; the original readiness review is historical evidence.
+See [the publication follow-up](archive/publication-follow-up-2026-11-11.md) for implemented safety changes and remaining platform/provider acceptance checks; the original readiness review is historical evidence.
 
 ## Prerequisites
 
@@ -78,4 +78,6 @@ Coverage includes both real optional workers, both official HTTP transports, val
 
 ## Installed artifacts and benchmarks
 
-After packaging, `bun run test:installed` validates the actual VSIX on the selected current VS Code runtime, including a hash-pinned v0.1.0 upgrade, reload and reinstall. `bun run test:minimum` repeats it on the pinned declared minimum runtime. Completion markers are required, not just CLI exit status. See [launch acceptance](launch-acceptance.md) for baseline/runtime prerequisites and limitations. `bun run benchmark:results` records synthetic long, wide and nested-JSON measurements in test-results/result-benchmark.json. No real connection data is used.
+After packaging, `bun run test:installed` validates the actual VSIX on the selected current VS Code runtime, using a fresh, isolated profile without a previous-version artifact. `bun run test:minimum` repeats it on the pinned declared minimum runtime. Completion markers are required, not just CLI exit status. See [launch acceptance](launch-acceptance.md) for runtime prerequisites and limitations. `bun run benchmark:results` records synthetic long, wide and nested-JSON measurements in test-results/result-benchmark.json. No real connection data is used.
+
+`bun run test:ui` drives real keyboard events in the rendered installed webview, checks OS clipboard transfers, editor/menu/dropdown focus, ARIA grid nodes and high-contrast rendering. `bun run platform:check` verifies all eight official pinned native archives without claiming that foreign-platform binaries executed on Linux.

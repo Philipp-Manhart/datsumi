@@ -1,26 +1,14 @@
 # Local release checklist
 
-GitHub Actions and automatic Git hooks are intentionally absent. Release verification is an explicit local command:
+Use [PUBLISHING.md](../PUBLISHING.md) for the complete first-publication workflow.
 
-```sh
-bun install --frozen-lockfile
-DATSUMI_TEST_HEADLESS=1 bun run release:check
-```
+- Start from a reviewed, clean source commit; use the frozen dependency lockfile.
+- Run `DATSUMI_TEST_HEADLESS=1 bun run release:check` (or use the equivalent environment setup in your shell).
+- Keep the generated source commit, exact VSIX hash and installed/native/UI/platform evidence together. Local success is recorded as **localChecksPassed**, never as automatic publication approval.
+- Review Marketplace copy, screenshots, MIT/dependency notices, support/privacy links and publisher ownership.
+- For publication, make the intended GitHub source/docs public and verify private vulnerability reporting, then complete the separately bound maintainer attestation and `bun run publication:check`.
+- Upload the exact verified pre-release VSIX and tag its matching source commit.
 
-Start from a reviewed clean commit. The command installs the frozen dependency graph, runs all unit/component/real-database/native suites, audits dependencies, scans Git history and the exact source snapshot for secrets, builds the VSIX, validates inventories/catalog hashes/license/private-file exclusions and writes a SHA-256 sidecar. It then validates the installed VSIX on current/minimum VS Code, upgrade/reload/reinstall and runs synthetic result benchmarks. Its report is saved under ignored test-results/release. Every failing gate stops the run.
+For development evidence use `--allow-dirty`; it never approves a clean release artifact. This unpublished project has no previous-version upgrade gate or private baseline artifact dependency. GitHub Actions and automatic hooks are intentionally absent.
 
-For development use `bun run release:check --allow-dirty`; its report always has releaseReady=false. Review and commit first, then rerun to approve a clean artifact. A clean report is evidence for that local commit/platform, not hosted-provider or cross-platform certification. Keep report/checksums with the release record. Use Python 3, Docker Compose, OpenSSL, VS Code/display and a functioning credential backend; see testing.md. Linux x64 downloads checksum-pinned Gitleaks automatically into a private verified cache. On other platforms set GITLEAKS_BIN to a trusted Gitleaks 8.30.1+ executable. libSQL's fixture similarly needs a trusted SQLD override outside Linux x64.
-
-Before uploading:
-
-- Check the version/changelog, MIT project license, current notices and privacy/support links.
-- Resolve every reproduced data-integrity/security blocker; passing unrelated tests is insufficient.
-- Test the actual platform(s) being advertised, including focused native keyboard/clipboard and credentials. Record skipped checks honestly.
-- Test hosted accounts and Oracle TCPS separately if claiming those deployments. Never put their credentials in issues, source or logs.
-- Inspect that all Actions workflow deletions are committed. To remove workflows from GitHub, push that deletion; deleting local files does not disable remote workflows or erase old runs.
-- Build/tag the reviewed source, verify the artifact checksum, then upload that exact VSIX. Repository visibility, Marketplace publisher setup and private vulnerability reporting are separate deliberate remote actions.
-- Enable GitHub private vulnerability reporting and verify the reporting link before making the repository public. Do not publish vulnerability details into a public issue while setting it up.
-
-The release script never pushes, tags, changes repository visibility, creates a Marketplace publisher or publishes an extension automatically.
-
-See [preview launch acceptance](launch-acceptance.md) for installed test prerequisites and manual platform/provider/publication gates. A clean local report does not override those gates.
+Cloud account exercises and extra native desktop/assistive-technology feedback are tracked in [TODO.md](../TODO.md). No local check can fabricate a Windows/macOS runtime result on Linux; the platform audit records source/contract and official binary integrity evidence explicitly.

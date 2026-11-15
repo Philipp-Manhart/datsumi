@@ -43,6 +43,22 @@ describe("DuckDB native artifact verification", () => {
     expect(nativeArtifact("win32-x64").files.some((file) => file.name === "duckdb.dll")).toBe(true);
     expect(() => nativeArtifact("linux-ia32")).toThrow(/unavailable/);
   });
+  it.each([
+    "linux-x64",
+    "linux-arm64",
+    "linux-x64-musl",
+    "linux-arm64-musl",
+    "darwin-x64",
+    "darwin-arm64",
+    "win32-x64",
+    "win32-arm64",
+  ])("has a complete reviewed native payload for %s", (platform) => {
+    const item = nativeArtifact(platform);
+    expect(item.files.map((file) => file.name)).toContain("duckdb.node");
+    expect(item.files.map((file) => file.name)).toContain("LICENSE");
+    expect(item.url).toContain("registry.npmjs.org/");
+    expect(item.integrity).toMatch(/^sha512-/);
+  });
   it("extracts only pinned regular files after verifying the complete archive", () => {
     const { artifact, archive, value } = fixture();
     expect(extractNativeArchive(artifact, archive).get("duckdb.node")).toEqual(value);

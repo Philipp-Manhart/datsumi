@@ -1,54 +1,70 @@
-<img src="resources/datsumi.png" width="80" height="80" alt="Datsumi logo">
+<img src="resources/datsumi.png" width="80" height="80" alt="Datsumi">
 
 # Datsumi — Database Explorer
 
 **Every database. One workspace.**
 
-A focused database client inside VS Code: connect, browse, query, inspect relationships and review changes without leaving your editor. SQL, documents and keys share one workspace; capabilities vary by engine.
+Explore tables, write queries, browse documents and inspect keys without leaving VS Code. Datsumi brings your everyday database work into a focused workspace that follows your editor's theme.
 
-## Start
+**Free and open source under MIT. All features included. No Pro edition, subscription, or Datsumi account.**
 
-This release is a preview. Install a Datsumi VSIX using **Extensions → … → Install from VSIX**. Open Datsumi in the Activity Bar and use the single **+ → Add Database Connection**. Enter a database file or server details, test, then connect. Optional drivers install automatically; npm is not required. Credentials remain separate from profiles and can use VS Code SecretStorage.
+![Datsumi's native SQL editor and query results inside VS Code](media/query-results.png)
 
-Use a table/collection/key to browse data, or **New Query → Ctrl/Cmd+Enter**. Results appear in the bottom **Query Results** panel. The sidebar's collapsed **History** view lists previous queries and their database. SQL completion/formatting use the selected connection. Your default formatter stays unchanged; use **Format SQL** directly or explicitly choose **SQL Editor Settings**.
+## Your everyday database tools
 
-For SQL grid edits: **stage cells/rows → Review SQL → Commit changes → native confirmation**. Conflicts roll back supported transactional batches. Server captures require a complete schema-qualified single-table SELECT *; views, unsafe/ambiguous targets and shortened originals stay protected. ClickHouse grids are read-only. MongoDB/Redis use their reviewed document/key workflows.
+- **Write SQL in your editor.** Connection-aware table and column suggestions, keyword completion, formatting, query plans, and Ctrl/Cmd+Enter to run.
+- **Keep results within reach.** A bottom results panel with multiple tabs, pinning, names, sorting, paging, search, column controls, and record/JSON inspectors.
+- **Copy straight into a spreadsheet.** Ctrl/Cmd+A → Ctrl/Cmd+C copies data across result pages as clean TSV. Add Shift to A for column names. UI labels, types, and statistics stay out of the clipboard.
+- **Review before you write.** Stage several SQL cell/row edits, inspect the generated SQL, then explicitly commit. Supported transactional batches use conflict detection; document/key changes have their own review workflow.
+- **See how tables connect.** Explore declared foreign keys in a relationship diagram, rearrange tables, and jump into their data.
+- **Pick up where you left off.** Find queries by database in the sidebar's Query History, save favorites, and reopen SQL without executing it.
 
-**Server access warning:** _Disable grid editing_ only affects staged edits. Editor SQL always uses your database account permissions. Use a database-enforced read-only account to prohibit all writes. SQLite/DuckDB file read-only mode is enforced by their engines.
+## Changes you can review
 
-## Supported engines
+Editing a grid does not immediately update the database. Stage your changes, choose **Review SQL**, then **Commit changes** and confirm. Views, keyless tables, ambiguous query results, and unsupported targets explain why editing is unavailable. ClickHouse grids are read-only.
 
-SQLite, DuckDB, PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, ClickHouse, MongoDB, Redis, libSQL and Turso. Neon and Supabase reuse PostgreSQL presets. See the [support matrix](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/support-matrix.md) for tested versions, authentication, transactions, platforms and cloud limitations. A supported protocol is not a promise of every provider feature.
+![Review staged changes before committing them](media/review-changes.png)
 
-## Everyday tools
+## Relationships, at a glance
 
-- Multiple results, pinning/renaming, sorting, paging, inspectors, comparisons and full-result copy within documented memory budgets.
-- **Cmd/Ctrl+A → Cmd/Ctrl+C** copies all available data as clean TSV; add Shift to A to include column names. Types, statistics and UI elements are excluded.
-- CSV/JSON export, bounded staged CSV import, exact integer/JSON/BSON preservation, and optional spreadsheet-safe CSV. Exact clipboard transfer remains unchanged.
-- Schema relationships, foreign-key navigation, SQL completion/formatting, history/favorites and native SQL files.
-- Connection edit/duplicate, SSH tunneling with host-key trust, verified TLS, environment labels and redacted diagnostics.
-- SQLite create/open and online backup. Pending table drafts can be saved to a file; optional local reload recovery is off by default and never auto-applies.
+Use **View Relationships** from a connection or table to explore the schema. Filter to a table, follow declared foreign keys, and browse the connected data.
 
-Use **Datsumi: Getting Started** for the native walkthrough and **Datsumi: Help and Privacy…** for guides bundled with the extension, available offline.
+![Table relationships inside VS Code](media/relationships.png)
 
-## In VS Code
+## SQL, documents, and keys
 
-![Native SQL editor with query results in the bottom panel](media/query-results.png)
+**Relational:** SQLite · DuckDB · PostgreSQL · MySQL · MariaDB · SQL Server · Oracle · ClickHouse · libSQL · Turso.
 
-![Foreign-key relationships between tables](media/relationships.png)
+**Documents and keys:** MongoDB · Redis.
 
-Screenshots use synthetic data in an isolated installed-extension test profile.
+Neon and Supabase connection presets reuse PostgreSQL support. Capabilities and authentication modes vary by engine and deployment; see the [support matrix](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/support-matrix.md).
 
-## Customize
+## Get started
 
-Open Settings and search **`@ext:philipp-manhart.datsumi`**. Choose grid density/page size/type labels/NULL display; SQL keyword casing/spacing/completion; history limits/expiry; credential defaults; CSV safety; and optional draft recovery. [Settings guide](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/settings.md) describes defaults, scope and privacy implications. Native VS Code themes/fonts remain in control.
+1. Install Datsumi, then open its icon in the Activity Bar.
+2. Click **+ → Add Database Connection**. Choose a database file or enter server details, test the connection when available, and connect.
+3. Open a table to browse, or choose **New Query** and press **Ctrl+Enter** on Windows/Linux or **Cmd+Enter** on macOS.
 
-## Help and privacy
+Results appear beside Terminal in the bottom panel. Query History is in the sidebar. **Datsumi: Getting Started** opens a short walkthrough; **Datsumi: Help and Privacy…** opens guides bundled with the extension, even offline.
 
-Read the [settings guide](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/settings.md), [support matrix](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/support-matrix.md), [privacy statement](https://github.com/Philipp-Manhart/datsumi/blob/main/PRIVACY.md), and [connection troubleshooting](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/connection-troubleshooting.md).
+Before the first Marketplace release, install the `.vsix` from [GitHub Releases](https://github.com/Philipp-Manhart/datsumi/releases) through **Extensions → … → Install from VSIX…**.
 
-Query history is unencrypted local text, bounded by age/count/size. Production history and persisted draft recovery require explicit User Settings opt-in. Workers are trusted code rather than an OS sandbox. Remote development runs on the extension host's machine. No Datsumi account or analytics backend is required.
+## Fits your workspace
 
-## License
+Datsumi is built for desktop VS Code on **Windows, macOS, and Linux**, including remote extension hosts. Use VS Code **1.138.0 or newer** in a trusted workspace. End users do not need npm, a compiler, or a separate Node installation. JavaScript drivers are bundled; DuckDB downloads a verified native package for your platform on first use.
 
-Datsumi's own code, documentation and original logo are [MIT](https://github.com/Philipp-Manhart/datsumi/blob/main/LICENSE). Bundled dependencies and assets retain their own licenses and required notices. Database server/container licenses are separate; servers are not distributed in the extension.
+Choose compact or comfortable rows, page sizes, type labels, NULL display, SQL formatting, and history retention in Settings: **`@ext:philipp-manhart.datsumi`**. Your existing default SQL formatter is preserved; use **Format SQL** directly or explicitly select Datsumi as your formatter.
+
+## Your connections and data
+
+Credentials can stay in session memory or use VS Code SecretStorage. SSH tunneling supports key/agent authentication and host-key verification; supported secure database transports verify TLS by default. Datsumi has no application analytics backend or account service.
+
+History is local, unencrypted query text; you can disable or clear it. Persisted edit-draft recovery is optional and off by default. Exact clipboard copying has explicit memory limits; incomplete captures are refused rather than silently copied. Use filtered-table export for larger transfers, or spreadsheet-safe CSV for untrusted formula-like text.
+
+For server databases, disabling grid editing does not restrict SQL permissions. Use a database-enforced read-only account when writes must be prohibited. [Privacy details](https://github.com/Philipp-Manhart/datsumi/blob/main/PRIVACY.md).
+
+## Open source, with everything included
+
+Datsumi's source is [MIT-licensed](https://github.com/Philipp-Manhart/datsumi/blob/main/LICENSE). There is one edition: no feature unlocks or paid Pro tier. Dependencies retain their own licenses and notices.
+
+[Source & contributions](https://github.com/Philipp-Manhart/datsumi) · [Report a bug](https://github.com/Philipp-Manhart/datsumi/issues) · [Settings](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/settings.md) · [Connection help](https://github.com/Philipp-Manhart/datsumi/blob/main/docs/connection-troubleshooting.md) · [Security reporting](https://github.com/Philipp-Manhart/datsumi/blob/main/SECURITY.md)

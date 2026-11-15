@@ -1,11 +1,14 @@
+/* oxlint-disable jsx-a11y/no-redundant-roles -- Explicit gridcell roles keep native and assistive/test semantics consistent across Chromium versions. */
+/* oxlint-disable jsx-a11y/no-noninteractive-element-to-interactive-role -- A native table with role=grid follows the ARIA interactive table pattern. */
 /* oxlint-disable react-perf/jsx-no-new-function-as-prop, react-perf/jsx-no-new-object-as-prop -- Native DOM handlers and layout styles carry row-specific values; memoizing them adds no child-render benefit. */
 import { clipboardTsv } from "@datsumi/core";
 import type { CellValue, WebviewRequest, WebviewResponse } from "@datsumi/protocol";
 /* oxlint-disable react/no-array-index-key -- Query rows and duplicate column names have positional identity. */
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useId } from "react";
 
 import { ActionMenu } from "./ActionMenu";
 import { columnSize } from "./columnSize";
+import { focusOutside } from "./focus";
 import { cellText, objectRow, isJson, pretty } from "./gridValues";
 import { Icon } from "./Icon";
 import { JsonInspector } from "./JsonInspector";
@@ -35,6 +38,8 @@ export function DataGrid({
     kind: "text" | "number" | "integer";
     touched: boolean;
   } | null>(null);
+  const cellId = useId();
+  const restoreGridFocus = useRef(false);
   const inlineInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     inlineInput.current?.focus();
@@ -118,7 +123,7 @@ export function DataGrid({
   }, [widths, hidden, columnOrder, frozen, postRequest, table.columns, state.activeResultId]);
   const [formError, setFormError] = useState("");
   const resize = useRef<{ col: number; x: number; width: number } | null>(null);
-  const grid = useRef<HTMLDivElement>(null);
+  const grid = useRef<HTMLTableElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (edit && dialog.current && !dialog.current.open) {
@@ -127,7 +132,7 @@ export function DataGrid({
     }
   }, [edit]);
   useEffect(() => {
-    if (grid.current) grid.current.scrollTop = 0;
+    if (grid.current?.parentElement) grid.current.parentElement.scrollTop = 0;
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- Navigation and ordering changes intentionally reset the external DOM scroll position.
   }, [state.page?.offset, state.sort?.column, state.sort?.direction, state.order, state.filters]);
   const pageKey = `${state.page?.offset}:${state.page?.limit}:${table.rows.length}`;
@@ -186,7 +191,7 @@ export function DataGrid({
       );
   };
   const autoSize = (column?: number) => {
-    const tableElement = grid.current?.querySelector("table");
+    const tableElement = grid.current;
     const font = tableElement ? getComputedStyle(tableElement) : undefined;
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
@@ -331,9 +336,16 @@ export function DataGrid({
         : []),
     ]);
   };
-  const stageInline = () => {
+  useEffect(() => {
+    if (!inline && restoreGridFocus.current) {
+      restoreGridFocus.current = false;
+      grid.current?.focus();
+    }
+  }, [inline]);
+  const stageInline = (restoreFocus = false) => {
     if (!inline) return;
     if (!inline.touched) {
+      restoreGridFocus.current = restoreFocus;
       setInline(null);
       return;
     }
@@ -356,6 +368,7 @@ export function DataGrid({
           : number;
     }
     stageValue(inline.row, inline.column, value);
+    restoreGridFocus.current = restoreFocus;
     setInline(null);
     setFormError("");
   };
@@ -662,17 +675,14 @@ export function DataGrid({
       )}
       <div className="grid-body">
         <div
-          ref={grid}
           className="grid-container selectable-grid"
+          role="presentation"
           onContextMenu={(event) => {
             if (event.defaultPrevented) return;
             event.preventDefault();
             setContext(null);
             setMenuAnchor({ x: event.clientX, y: event.clientY });
           }}
-          role="grid"
-          aria-label="Query result rows"
-          tabIndex={0}
           onCopy={(event) => {
             if (
               event.target instanceof Element &&
@@ -701,7 +711,7 @@ export function DataGrid({
             }
             if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
               event.preventDefault();
-              const box = grid.current?.getBoundingClientRect();
+              const box = grid.current?.parentElement?.getBoundingClientRect();
               setMenuAnchor({ x: (box?.left ?? 0) + 24, y: (box?.top ?? 0) + 24 });
               return;
             }
@@ -771,7 +781,7 @@ export function DataGrid({
             const pageRows = Math.max(
               1,
               Math.floor(
-                ((grid.current?.clientHeight ?? 0) -
+                ((grid.current?.parentElement?.clientHeight ?? 0) -
                   (grid.current?.querySelector("thead")?.getBoundingClientRect().height ?? 0)) /
                   (grid.current?.querySelector("tbody tr")?.getBoundingClientRect().height || 28),
               ),
@@ -805,7 +815,11 @@ export function DataGrid({
                 break;
               case "Tab": {
                 const next = row * cols.length + position + (event.shiftKey ? -1 : 1);
-                if (next < 0 || next >= table.rows.length * cols.length) return;
+                if (next < 0 || next >= table.rows.length * cols.length) {
+                  if (grid.current && focusOutside(grid.current, event.shiftKey))
+                    event.preventDefault();
+                  return;
+                }
                 row = Math.floor(next / cols.length);
                 position = next % cols.length;
                 break;
@@ -842,10 +856,29 @@ export function DataGrid({
             resize.current = null;
           }}
         >
-          <table>
+          <table
+            ref={grid}
+            role="grid"
+            aria-label="Query result rows"
+            aria-multiselectable="true"
+            aria-rowcount={
+              state.page?.totalRows !== undefined
+                ? state.page.totalRows + 1
+                : state.page?.hasMore
+                  ? -1
+                  : (state.page?.offset ?? 0) + table.rows.length + 1
+            }
+            aria-colcount={cols.length + 1}
+            aria-activedescendant={
+              table.rows[selection.endRow] && cols[endColumn]
+                ? `${cellId}-${selection.endRow}-${cols[endColumn]!.index}`
+                : undefined
+            }
+            tabIndex={0}
+          >
             <thead>
-              <tr>
-                <th className="row-number" aria-label="Row number">
+              <tr aria-rowindex={1}>
+                <th className="row-number" aria-label="Row number" aria-colindex={1}>
                   <button
                     className="select-all-cells"
                     aria-label="Select all cells"
@@ -891,6 +924,7 @@ export function DataGrid({
                         width: widths[index] ?? 160,
                         maxWidth: widths[index] ?? 160,
                       }}
+                      aria-colindex={(columnPositions.get(index) ?? 0) + 2}
                       aria-sort={
                         direction === "asc"
                           ? "ascending"
@@ -960,9 +994,15 @@ export function DataGrid({
               {table.rows.map((row, index) => {
                 const change = pending(objectRow(table, row));
                 return (
-                  <tr key={index} className={change ? `staged-${change.kind}` : ""}>
-                    <td
+                  <tr
+                    aria-rowindex={(state.page?.offset ?? 0) + index + 2}
+                    key={index}
+                    className={change ? `staged-${change.kind}` : ""}
+                  >
+                    <th
                       className="row-number"
+                      scope="row"
+                      aria-colindex={1}
                       onClick={() => {
                         setSelection({
                           row: index,
@@ -974,13 +1014,17 @@ export function DataGrid({
                       }}
                     >
                       {(state.page?.offset ?? 0) + index + 1}
-                    </td>
-                    {cols.map(({ index: column }) => {
+                    </th>
+                    {cols.map(({ index: column }, visibleColumn) => {
                       const value = valueAt(index, column),
                         text = cellText(value);
                       return (
                         <td
                           key={column}
+                          role="gridcell"
+                          id={`${cellId}-${index}-${column}`}
+                          aria-colindex={visibleColumn + 2}
+                          aria-label={`${table.columns[column]}: ${value === null ? (state.display?.nullDisplay ?? "NULL") : text || "Empty text"}`}
                           data-row={index}
                           data-column={column}
                           className={`cell-${value === null ? "null" : typeof value === "object" ? value.type : typeof value} ${isSelected(index, column) ? "selected-cell" : ""} ${frozenLeft.has(column) ? "frozen-column" : ""}`}
@@ -1028,15 +1072,16 @@ export function DataGrid({
                               onChange={(event) =>
                                 setInline({ ...inline, text: event.target.value, touched: true })
                               }
-                              onBlur={stageInline}
+                              onBlur={() => stageInline()}
                               onClick={(event) => event.stopPropagation()}
                               onKeyDown={(event) => {
                                 event.stopPropagation();
                                 if (event.key === "Enter") {
                                   event.preventDefault();
-                                  stageInline();
+                                  stageInline(true);
                                 } else if (event.key === "Escape") {
                                   event.preventDefault();
+                                  restoreGridFocus.current = true;
                                   setInline(null);
                                   setFormError("");
                                 }
@@ -1070,7 +1115,13 @@ export function DataGrid({
           <aside className="record-inspector" aria-label="Record inspector">
             <header>
               <strong>Row {(state.page?.offset ?? 0) + selection.endRow + 1}</strong>
-              <button aria-label="Close inspector" onClick={() => setInspector(false)}>
+              <button
+                aria-label="Close inspector"
+                onClick={() => {
+                  setInspector(false);
+                  grid.current?.focus();
+                }}
+              >
                 <Icon name="close" />
               </button>
             </header>

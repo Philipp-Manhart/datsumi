@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 — 2026-11-15 (preview)
+
+- Improve result-grid accessibility, active-cell announcements, keyboard editing, focus recovery, and menu navigation. Respect high contrast and reduced-motion preferences.
+- Add installed-webview keyboard/accessibility checks and verify official DuckDB payloads for all eight supported platform targets.
+- Simplify first-publication validation to a fresh installation, separate local evidence from publication approval, and improve Windows contributor launching.
+- Prepare original Marketplace/GitHub copy, actual UI screenshots, and first-publication/contributor documentation. Datsumi remains one free MIT edition with no Pro tier.
+
 ## 0.3.0 — 2026-11-14 (preview)
 
 - Protect captured exports, saved history, drafts, backups and streamed exports with alias-safe atomic output, private files and destination revalidation.

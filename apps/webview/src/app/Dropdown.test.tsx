@@ -45,3 +45,22 @@ it("supports keyboard selection, type-ahead, Escape, and outside clicks without 
   expect(screen.queryByRole("listbox")).toBeNull();
   expect(screen.getByLabelText("Search")).toHaveFocus();
 });
+
+it("leaves Tab native and disables a dropdown with no choices", () => {
+  const { rerender } = render(
+    <Dropdown
+      label="Engine"
+      value="sqlite"
+      options={[{ value: "sqlite", label: "SQLite" }]}
+      onChange={() => {}}
+    />,
+  );
+  const button = screen.getByRole("combobox");
+  button.focus();
+  fireEvent.keyDown(button, { key: "Enter" });
+  expect(screen.getByRole("listbox")).toBeInTheDocument();
+  expect(fireEvent.keyDown(button, { key: "Tab" })).toBe(true);
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  rerender(<Dropdown label="Engine" value="" options={[]} onChange={() => {}} />);
+  expect(button).toBeDisabled();
+});

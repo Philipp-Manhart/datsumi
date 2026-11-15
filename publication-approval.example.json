@@ -1,0 +1,10 @@
+{
+  "approved": false,
+  "approvedCommit": "",
+  "artifactSha256": "",
+  "reviewedBy": "",
+  "checks": {
+    "publisherOwnership": false,
+    "listingReviewed": false
+  }
+}

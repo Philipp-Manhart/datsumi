@@ -1,31 +1,28 @@
-/* oxlint-disable no-await-in-loop -- Install/launch/upgrade phases share one isolated VS Code profile. */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile } from "node:fs/promises";
+/* oxlint-disable no-await-in-loop -- Package preparation and fresh-profile launches are ordered. */
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { createVSIX } from "@vscode/vsce";
+
+import { vscodeCommand } from "../../../scripts/vscode-command.mjs";
 
 const extension = fileURLToPath(new URL("../", import.meta.url));
 const manifest = JSON.parse(await readFile(join(extension, "package.json"), "utf8"));
 const vsix = resolve(
   process.env.DATSUMI_TEST_VSIX || join(extension, `datsumi-${manifest.version}.vsix`),
 );
-const previous = resolve(
-  process.env.DATSUMI_TEST_PREVIOUS_VSIX || join(extension, "datsumi-0.1.0.vsix"),
-);
-// Published v0.1.0 release asset digest. An upgrade test must use the actual previous distributable.
-const previousSha = "72c8472d7a59e0d99177618d545922d6b84cb9a918ac731fa0e84be13ed4821e";
-if (
-  createHash("sha256")
-    .update(await readFile(previous))
-    .digest("hex") !== previousSha
-)
-  throw new Error(
-    "Supply the published v0.1.0 VSIX using DATSUMI_TEST_PREVIOUS_VSIX (pinned digest mismatch).",
-  );
-const executable = process.env.VSCODE_EXECUTABLE || "code";
+const launcher = await vscodeCommand();
 const screenshots = process.argv.includes("--screenshots");
+const uiOnly = process.argv.includes("--ui");
+const listener = createServer();
+await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
+const debugPort = listener.address().port;
+await new Promise((resolve) => listener.close(resolve));
 const root = await mkdtemp(join(tmpdir(), "datsumi-package-"));
 const harness = join(root, "harness");
 await mkdir(harness);
@@ -38,6 +35,8 @@ await writeFile(
     engines: { vscode: "^1.138.0" },
     main: "index.cjs",
     activationEvents: ["onStartupFinished"],
+    license: "MIT",
+    repository: { type: "git", url: "https://github.com/Philipp-Manhart/datsumi.git" },
   }),
 );
 await writeFile(
@@ -58,6 +57,13 @@ exports.activate = async () => {
 };
 `,
 );
+const harnessVsix = join(root, "test-harness.vsix");
+await copyFile(join(extension, "LICENSE"), join(harness, "LICENSE"));
+await writeFile(
+  join(harness, "README.md"),
+  "# Isolated Datsumi test harness\n\nOnly installed in disposable test profiles. Never distributed with Datsumi.\n",
+);
+await createVSIX({ cwd: harness, packagePath: harnessVsix, dependencies: false });
 const steps = [];
 let supportsSharedData = false;
 async function run(profile, args, env = {}) {
@@ -71,8 +77,8 @@ async function run(profile, args, env = {}) {
   await new Promise((resolveRun, reject) => {
     const childEnv = { ...process.env, ...env };
     delete childEnv.ELECTRON_RUN_AS_NODE;
-    const child = spawn(executable, [...common, ...args], {
-      env: childEnv,
+    const child = spawn(launcher.command, [...launcher.args, ...common, ...args], {
+      env: { ...childEnv, ...launcher.env },
       stdio: ["ignore", "pipe", "pipe"],
     });
     for (const stream of [child.stdout, child.stderr])
@@ -108,22 +114,27 @@ async function launch(profile, test, phase, expected) {
     ".datsumi-tests",
   );
   await mkdir(tests, { recursive: true });
-  for (const file of [test, "connection-form.cjs"])
+  for (const file of [test, "connection-form.cjs", "cdp.cjs"])
     await copyFile(join(extension, "test", file), join(tests, file));
   await run(
     profile,
     [
-      ...(screenshots ? ["--ozone-platform=x11", "--disable-gpu"] : []),
+      ...(screenshots || uiOnly
+        ? [...(process.platform === "linux" ? ["--ozone-platform=x11"] : []), "--disable-gpu"]
+        : []),
+      ...(uiOnly || screenshots
+        ? [`--remote-debugging-port=${debugPort}`, "--remote-debugging-address=127.0.0.1"]
+        : []),
       "--wait",
       "--new-window",
       "--disable-workspace-trust",
       "--skip-welcome",
       "--skip-release-notes",
-      `--extensionDevelopmentPath=${harness}`,
       workspace,
     ],
     {
       DATSUMI_TEST_DIRECTORY: directory,
+      DATSUMI_TEST_DEBUG_PORT: String(debugPort),
       DATSUMI_INSTALLED_TEST_FILE: join(tests, test),
       DATSUMI_TEST_CAPTURE_DIR: join(extension, "media"),
       DATSUMI_TEST_INSTALLED_ROOT: join(directory, "extensions"),
@@ -143,18 +154,13 @@ try {
   const version = await run("fresh", ["--version"]);
   supportsSharedData = Number(version.match(/^1\.(\d+)/)?.[1] ?? 0) >= 146;
   await run("fresh", ["--install-extension", vsix, "--force"]);
-  if (screenshots) {
+  await run("fresh", ["--install-extension", harnessVsix, "--force"]);
+  if (uiOnly) {
+    await launch("fresh", "ui.cjs", "ui", manifest.version);
+  } else if (screenshots) {
     await launch("fresh", "capture.cjs", "screenshots", manifest.version);
   } else {
     await launch("fresh", "smoke.cjs", "fresh-package", manifest.version);
-    await run("upgrade", ["--install-extension", previous, "--force"]);
-    await launch("upgrade", "installed.cjs", "seed", "0.1.0");
-    await run("upgrade", ["--install-extension", vsix, "--force"]);
-    await launch("upgrade", "installed.cjs", "upgrade", manifest.version);
-    await launch("upgrade", "installed.cjs", "reload", manifest.version);
-    await run("upgrade", ["--uninstall-extension", "philipp-manhart.datsumi"]);
-    await run("upgrade", ["--install-extension", vsix, "--force"]);
-    await launch("upgrade", "installed.cjs", "reinstall", manifest.version);
   }
   const report = {
     passed: true,
@@ -164,7 +170,6 @@ try {
     vsixSha256: createHash("sha256")
       .update(await readFile(vsix))
       .digest("hex"),
-    previousSha256: previousSha,
     steps,
   };
   const results = resolve(extension, "../../test-results");
@@ -172,14 +177,14 @@ try {
   await writeFile(
     join(
       results,
-      `installed-${screenshots ? "screenshots" : process.env.DATSUMI_TEST_RUNTIME_LABEL || "current"}.json`,
+      `installed-${uiOnly ? "ui" : screenshots ? "screenshots" : process.env.DATSUMI_TEST_RUNTIME_LABEL || "current"}.json`,
     ),
     JSON.stringify(report, null, 2) + "\n",
   );
   console.log(
     screenshots
       ? "Synthetic installed-extension screenshots captured."
-      : "Installed VSIX, upgrade, reload and reinstall checks passed.",
+      : "Fresh installed VSIX checks passed.",
   );
   success = true;
 } finally {

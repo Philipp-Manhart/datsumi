@@ -14,7 +14,7 @@ Create disposable samples with `bun run sample:db`, `bun run sample:duckdb`, or 
 - `DATSUMI_TEST_GROUP=core bun run test:drivers`: PostgreSQL, MySQL, MariaDB and SQL Server fixtures.
 - `DATSUMI_TEST_GROUP=extended bun run test:drivers`: Oracle and ClickHouse fixtures.
 - `bun run test:nosql` / `bun run test:remote`: MongoDB/Redis and authenticated libSQL/Turso transport checks.
-- `DATSUMI_TEST_HEADLESS=1 bun run release:check`: full local release gates, secret/dependency scans and distributable verification. Requires a clean commit. For development evidence use `--allow-dirty`; that report cannot approve publication.
+- `DATSUMI_TEST_HEADLESS=1 bun run release:check`: full local release gates, secret/dependency scans, fresh installed/UI tests and distributable verification (no previous VSIX required). Requires a clean commit. For development evidence use `--allow-dirty`; that report cannot approve publication.
 
 See [testing](docs/testing.md), [support matrix](docs/support-matrix.md) and [release checklist](docs/release-checklist.md) for Docker, VS Code/display, credential-store and platform prerequisites. GitHub Actions and automatic Git hooks are intentionally absent.
 
@@ -29,3 +29,5 @@ New bundled dependencies must pass the license inventory policy, include full no
 ## Issues and reviews
 
 Include engine/server version, VS Code/OS/architecture, minimal synthetic schema/query, expected/actual behavior, and redacted diagnostics. Use **Copy Redacted Connection Diagnostics**; it excludes credentials, hostnames, SQL and values. Do not paste an auth token or customer data. Report vulnerabilities privately using [SECURITY.md](SECURITY.md).
+
+Publication setup is in [PUBLISHING.md](PUBLISHING.md). Datsumi is one free MIT edition; contributions do not require a Pro license, publishing token or private cloud account. Source/official native-artifact portability checks run with `bun run platform:check`; native rendered keyboard/accessibility-tree checks run with `bun run test:ui` after packaging.

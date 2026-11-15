@@ -338,7 +338,7 @@ describe("database workbench interactions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Stage row" }));
     receive({ ...browserState, busy: true, staged: changes, previewSql: ["old preview"] });
     receive({ ...browserState, busy: false, staged: changes, previewSql: ["old preview"] });
-    expect(screen.getByRole("cell", { name: "Second edit" })).toBeVisible();
+    expect(screen.getByRole("gridcell", { name: /: Second edit$/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Commit changes" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(postMessage).toHaveBeenCalledWith({ type: "table/discard" });
@@ -348,8 +348,8 @@ describe("database workbench interactions", () => {
     const postMessage = vi.fn<(message: WebviewRequest) => void>();
     render(<App postMessage={postMessage} />);
     receive(browserState);
-    fireEvent.click(screen.getByRole("cell", { name: "Alex" }));
-    fireEvent.click(screen.getByRole("cell", { name: "Sam" }), { shiftKey: true });
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Alex$/ }));
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Sam$/ }), { shiftKey: true });
     fireEvent.click(menuAction("Copy selection"));
     expect(postMessage).toHaveBeenLastCalledWith({ type: "data/copy", text: "Alex\r\nSam" });
     fireEvent.click(screen.getByRole("button", { name: "Inspect row" }));
@@ -396,15 +396,15 @@ describe("compact editable query captures", () => {
       "title",
       expect.stringContaining("SELECT * FROM customers"),
     );
-    fireEvent.doubleClick(screen.getAllByRole("cell", { name: "NULL" })[0]!);
+    fireEvent.doubleClick(screen.getAllByRole("gridcell", { name: /: NULL$/ })[0]!);
     fireEvent.blur(screen.getByLabelText("Edit blob, row 1"));
     expect(document.querySelector(".pending-bar")).toBeNull();
-    fireEvent.doubleClick(screen.getByRole("cell", { name: "Alex" }));
+    fireEvent.doubleClick(screen.getByRole("gridcell", { name: /: Alex$/ }));
     fireEvent.change(screen.getByLabelText("Edit name, row 1"), {
       target: { value: "First change" },
     });
     fireEvent.keyDown(screen.getByLabelText("Edit name, row 1"), { key: "Enter" });
-    fireEvent.doubleClick(screen.getByRole("cell", { name: "Sam" }));
+    fireEvent.doubleClick(screen.getByRole("gridcell", { name: /: Sam$/ }));
     fireEvent.change(screen.getByLabelText("Edit name, row 2"), {
       target: { value: "Second change" },
     });
@@ -448,14 +448,14 @@ describe("UX refinements", () => {
     const postMessage = vi.fn<(message: WebviewRequest) => void>();
     render(<App postMessage={postMessage} />);
     receive(browserState);
-    fireEvent.doubleClick(screen.getByRole("cell", { name: "Alex" }));
+    fireEvent.doubleClick(screen.getByRole("gridcell", { name: /: Alex$/ }));
     fireEvent.change(screen.getByLabelText("Edit name, row 1"), { target: { value: "Changed" } });
     fireEvent.keyDown(screen.getByLabelText("Edit name, row 1"), { key: "Enter" });
-    expect(screen.getByRole("cell", { name: "Changed" })).toBeVisible();
+    expect(screen.getByRole("gridcell", { name: /: Changed$/ })).toBeVisible();
     fireEvent.click(menuAction("Undo edit"));
-    expect(screen.getByRole("cell", { name: "Alex" })).toBeVisible();
+    expect(screen.getByRole("gridcell", { name: /: Alex$/ })).toBeVisible();
     fireEvent.click(menuAction("Redo edit"));
-    expect(screen.getByRole("cell", { name: "Changed" })).toBeVisible();
+    expect(screen.getByRole("gridcell", { name: /: Changed$/ })).toBeVisible();
     expect(postMessage.mock.calls.some(([m]) => m.type === "table/changes" && m.apply)).toBe(false);
   });
   it("restores column preferences and offers a full record JSON view", () => {
@@ -474,8 +474,8 @@ describe("UX refinements", () => {
     const postMessage = vi.fn<(message: WebviewRequest) => void>();
     render(<App postMessage={postMessage} />);
     receive(browserState);
-    fireEvent.click(screen.getByRole("cell", { name: "Alex" }));
-    fireEvent.click(screen.getByRole("cell", { name: "Sam" }), { shiftKey: true });
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Alex$/ }));
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Sam$/ }), { shiftKey: true });
     fireEvent.click(menuAction("Compare selected rows"));
     expect(document.querySelectorAll(".comparison-different").length).toBeGreaterThan(0);
   });
@@ -535,9 +535,9 @@ describe("compact actions and context menus", () => {
     const postMessage = vi.fn<(message: WebviewRequest) => void>();
     render(<App postMessage={postMessage} />);
     receive(browserState);
-    fireEvent.click(screen.getByRole("cell", { name: "Alex" }));
-    fireEvent.click(screen.getByRole("cell", { name: "Sam" }), { shiftKey: true });
-    fireEvent.contextMenu(screen.getByRole("cell", { name: "Sam" }), {
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Alex$/ }));
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Sam$/ }), { shiftKey: true });
+    fireEvent.contextMenu(screen.getByRole("gridcell", { name: /: Sam$/ }), {
       clientX: 120,
       clientY: 180,
     });
@@ -636,7 +636,7 @@ describe("spreadsheet keyboard selection", () => {
         headers: false,
         format: "tsv",
       });
-      fireEvent.click(screen.getByRole("cell", { name: "next" }));
+      fireEvent.click(screen.getByRole("gridcell", { name: /: next$/ }));
       fireEvent.keyDown(screen.getByRole("grid"), { key: "c", ...modifier });
       expect(postMessage).toHaveBeenLastCalledWith({ type: "data/copy", text: "next" });
     },
@@ -648,20 +648,26 @@ describe("spreadsheet keyboard selection", () => {
       preferences: { columns: ["name", "id", "blob"], hidden: ["blob"] },
     });
     const grid = screen.getByRole("grid");
-    fireEvent.click(screen.getByRole("cell", { name: "Alex" }));
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Alex$/ }));
     fireEvent.keyDown(grid, { key: "ArrowRight", shiftKey: true });
     expect(document.querySelectorAll('td[aria-selected="true"]')).toHaveLength(2);
     fireEvent.keyDown(grid, { key: "ArrowDown", shiftKey: true });
     expect(document.querySelectorAll('td[aria-selected="true"]')).toHaveLength(4);
     fireEvent.keyDown(grid, { key: "Home", ctrlKey: true });
-    expect(screen.getByRole("cell", { name: "Alex" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("gridcell", { name: /: Alex$/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     fireEvent.keyDown(grid, { key: "End", ctrlKey: true });
     expect(document.querySelector('td[data-row="1"][data-column="0"]')).toHaveAttribute(
       "aria-selected",
       "true",
     );
     fireEvent.keyDown(grid, { key: "Tab", shiftKey: true });
-    expect(screen.getByRole("cell", { name: "Sam" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("gridcell", { name: /: Sam$/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     fireEvent.keyDown(grid, { key: "Home", ctrlKey: true });
     fireEvent.keyDown(grid, { key: "Tab" });
     expect(document.querySelector('td[data-row="0"][data-column="0"]')).toHaveAttribute(
@@ -677,7 +683,7 @@ describe("spreadsheet keyboard selection", () => {
     const postMessage = vi.fn<(message: WebviewRequest) => void>();
     render(<App postMessage={postMessage} />);
     receive(browserState);
-    fireEvent.click(screen.getByRole("cell", { name: "Alex" }));
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Alex$/ }));
     fireEvent.keyDown(screen.getByRole("grid"), { key: "F2" });
     const input = screen.getByLabelText("Edit name, row 1");
     const event = new KeyboardEvent("keydown", {
@@ -691,7 +697,7 @@ describe("spreadsheet keyboard selection", () => {
     expect(document.querySelectorAll('td[aria-selected="true"]')).toHaveLength(1);
     fireEvent.change(input, { target: { value: "Keyboard edit" } });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(screen.getByRole("cell", { name: "Keyboard edit" })).toBeVisible();
+    expect(screen.getByRole("gridcell", { name: /: Keyboard edit$/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Commit changes" })).toBeDisabled();
     expect(postMessage.mock.calls.some(([m]) => m.type === "table/changes" && m.apply)).toBe(false);
   });
@@ -711,8 +717,8 @@ describe("grid polish and result pinning", () => {
     const postMessage = vi.fn<(message: WebviewRequest) => void>();
     render(<App postMessage={postMessage} />);
     receive(browserState);
-    fireEvent.click(screen.getByRole("cell", { name: "Alex" }));
-    fireEvent.click(screen.getByRole("cell", { name: "Sam" }), { shiftKey: true });
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Alex$/ }));
+    fireEvent.click(screen.getByRole("gridcell", { name: /: Sam$/ }), { shiftKey: true });
     fireEvent.click(menuAction("Copy with headers"));
     expect(postMessage).toHaveBeenLastCalledWith({
       type: "data/copy",
@@ -732,8 +738,8 @@ describe("grid polish and result pinning", () => {
     });
     fireEvent.click(screen.getByRole("menuitem", { name: "Freeze column" }));
     expect(document.querySelectorAll("thead th.frozen-column")).toHaveLength(1);
-    expect(screen.getByRole("cell", { name: "Alex" })).toHaveClass("frozen-column");
-    expect(screen.getByRole("cell", { name: "Alex" })).toHaveStyle({ left: "48px" });
+    expect(screen.getByRole("gridcell", { name: /: Alex$/ })).toHaveClass("frozen-column");
+    expect(screen.getByRole("gridcell", { name: /: Alex$/ })).toHaveStyle({ left: "48px" });
     expect(screen.getAllByRole("columnheader")[1]).toHaveTextContent("name");
     fireEvent.doubleClick(screen.getByRole("button", { name: "Resize name" }));
     expect(screen.getAllByRole("columnheader")[1]).toHaveStyle({ width: "80px" });
@@ -776,4 +782,69 @@ describe("grid polish and result pinning", () => {
       "true",
     );
   });
+});
+
+it("exposes grid positions/active cells and returns focus after keyboard editing", () => {
+  render(<App postMessage={vi.fn<(message: WebviewRequest) => void>()} />);
+  receive({
+    ...state,
+    tableInfo: {
+      resourceId: "customers",
+      name: "customers",
+      kind: "table",
+      editable: true,
+      ddl: "",
+      foreignKeys: [],
+      indexes: [],
+      columns: [
+        {
+          name: "id",
+          type: "INTEGER",
+          primaryKey: 1,
+          notNull: true,
+          generated: false,
+          defaultValue: null,
+        },
+        {
+          name: "name",
+          type: "TEXT",
+          primaryKey: 0,
+          notNull: false,
+          generated: false,
+          defaultValue: null,
+        },
+        {
+          name: "blob",
+          type: "BLOB",
+          primaryKey: 0,
+          notNull: false,
+          generated: false,
+          defaultValue: null,
+        },
+      ],
+    },
+    result: {
+      kind: "table",
+      columns: ["id", "name", "blob"],
+      rows: [
+        [1, "Alex", null],
+        [2, "Sam", null],
+      ],
+    },
+  });
+  const grid = screen.getByRole("grid");
+  grid.focus();
+  fireEvent.keyDown(grid, { key: "ArrowRight" });
+  const active = document.getElementById(grid.getAttribute("aria-activedescendant")!);
+  expect(active).toHaveAccessibleName("name: Alex");
+  expect(grid).toHaveAttribute("aria-rowcount", "-1"); // The paged fixture has more rows but no exact total.
+  expect(grid).toHaveAttribute("aria-colcount", "4");
+  fireEvent.keyDown(grid, { key: "F2" });
+  const editor = screen.getByRole("textbox", { name: "Edit name, row 1" });
+  expect(editor).toHaveFocus();
+  fireEvent.keyDown(editor, { key: "Escape" });
+  expect(grid).toHaveFocus();
+  fireEvent.keyDown(grid, { key: "End", ctrlKey: true });
+  fireEvent.keyDown(grid, { key: "Tab" });
+  expect(grid).not.toHaveFocus();
 });

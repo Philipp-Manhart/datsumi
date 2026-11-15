@@ -1558,3 +1558,41 @@ button.column-resizer:hover {
   white-space: normal;
   margin: 6px 0;
 }
+
+/* Selection and keyboard focus stay visible in dark, light and high-contrast themes. */
+.selectable-grid td.selected-cell {
+  color: var(--vscode-editor-selectionForeground, var(--vscode-foreground));
+}
+body.vscode-high-contrast .selected-cell,
+body.vscode-high-contrast-light .selected-cell {
+  outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+@media (forced-colors: active) {
+  .selectable-grid td.selected-cell {
+    background: Highlight;
+    color: HighlightText;
+    outline: 1px solid HighlightText;
+    forced-color-adjust: none;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  .selectable-grid:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .codicon-modifier-spin {
+    animation: none;
+  }
+}
+.selectable-grid table:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, var(--ring));
+  outline-offset: -2px;
+}
+.selectable-grid tbody th.row-number {
+  position: sticky;
+  left: 0;
+  top: auto;
+  font-weight: normal;
+}

@@ -1,5 +1,6 @@
-/* oxlint-disable no-await-in-loop -- Release gates are ordered, each must finish before the next begins. */
 import { spawnSync, execFileSync } from "node:child_process";
+/* oxlint-disable no-await-in-loop -- Release gates are ordered, each must finish before the next begins. */
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, writeFile, rm, copyFile, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -25,7 +26,9 @@ await mkdir(output, { recursive: true, mode: 0o700 });
 const report = {
   commit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
   dirty: Boolean(dirty),
-  releaseReady: false,
+  localChecksPassed: false,
+  publicationApproval: "not-recorded",
+  artifact: null,
   steps: [],
   started: new Date().toISOString(),
 };
@@ -112,8 +115,25 @@ try {
   ]);
   run("bun", ["run", "test:installed"]);
   run("bun", ["run", "test:minimum"]);
+  run("bun", ["run", "test:ui"]);
+  run("bun", ["run", "platform:check"]);
   run("bun", ["run", "benchmark:results"]);
-  report.releaseReady =
+  const artifactFile = `apps/extension/datsumi-${manifest.version}.vsix`;
+  const payload = await readFile(join(root, artifactFile));
+  report.artifact = {
+    file: artifactFile,
+    version: manifest.version,
+    bytes: payload.length,
+    sha256: createHash("sha256").update(payload).digest("hex"),
+  };
+  for (const name of ["current", "minimum", "ui"]) {
+    const evidence = JSON.parse(
+      await readFile(join(root, `test-results/installed-${name}.json`), "utf8"),
+    );
+    if (!evidence.passed || evidence.vsixSha256 !== report.artifact.sha256)
+      throw new Error("Installed test evidence does not match the final VSIX.");
+  }
+  report.localChecksPassed =
     !dirty &&
     !execFileSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" }).trim() &&
     execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim() ===
