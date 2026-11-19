@@ -7,7 +7,7 @@ Use [PUBLISHING.md](../PUBLISHING.md) for the complete first-publication workflo
 - Keep the generated source commit, exact VSIX hash and installed/native/UI/platform evidence together. Local success is recorded as **localChecksPassed**, never as automatic publication approval.
 - Review Marketplace copy, screenshots, MIT/dependency notices, support/privacy links and publisher ownership.
 - For publication, make the intended GitHub source/docs public and verify private vulnerability reporting, then complete the separately bound maintainer attestation and `bun run publication:check`.
-- Upload the exact verified pre-release VSIX and tag its matching source commit.
+- Upload the exact verified VSIX and tag its matching source commit.
 
 For development evidence use `--allow-dirty`; it never approves a clean release artifact. This unpublished project has no previous-version upgrade gate or private baseline artifact dependency. GitHub Actions and automatic hooks are intentionally absent.
 

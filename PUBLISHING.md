@@ -1,6 +1,6 @@
 # Publish Datsumi
 
-Datsumi is an unpublished MIT project. This workflow prepares its first public release without previous-version upgrade prerequisites, GitHub Actions, or access to private cloud accounts.
+Datsumi is an MIT-licensed project. This workflow prepares a public release without previous-version upgrade prerequisites, GitHub Actions, or access to private cloud accounts.
 
 ## 1. Validate a clean source commit
 
@@ -43,6 +43,8 @@ Live cloud-account validation and extra native desktop/screen-reader feedback re
 
 ## 4. Upload the exact verified VSIX
 
-The package script already marks the VSIX as a Marketplace pre-release. In publisher management choose **New extension → Visual Studio Code** for the first upload (or the existing extension's upload action afterward), and upload **apps/extension/datsumi-<version>.vsix** from the successful report. Confirm the pre-release channel and the rendered README/images, then publish. Keep the checksum/report with the release. Do not rebuild between approval and upload.
+The default package script creates a regular Marketplace release with no Preview label or pre-release channel flag. In publisher management choose **New extension → Visual Studio Code** for the first upload (or the existing extension's upload action afterward), and upload **apps/extension/datsumi-<version>.vsix** from the successful report. Confirm the regular release channel and the rendered README/images, then publish. Keep the checksum/report with the release. Do not rebuild between approval and upload.
 
 Create a source tag and GitHub release pointing to that same commit, and attach the identical VSIX/checksum plus validation report. The local scripts do not push, publish, create accounts, save publishing tokens, or alter repository visibility. A custom domain and publisher verification badge are optional; they are not prerequisites for publishing this extension.
+
+To publish a preview intentionally, use a distinct version, set the manifest Preview label, and package with `--pre-release`. Microsoft requires different version numbers for regular and pre-release uploads; an existing pre-release cannot be overwritten as a regular release with the same version.

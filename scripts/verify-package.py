@@ -5,13 +5,21 @@ from pathlib import Path
 import re
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 
 path = Path(sys.argv[1])
 with zipfile.ZipFile(path) as archive:
     names = archive.namelist()
     manifest = json.loads(archive.read('extension/package.json'))
+    vsix_manifest = ET.fromstring(archive.read('extension.vsixmanifest'))
+    ns = {'v': 'http://schemas.microsoft.com/developer/vsx-schema/2011'}
+    properties = {item.attrib['Id']: item.attrib.get('Value') for item in vsix_manifest.findall('.//v:Property', ns)}
+    pre_release = properties.get('Microsoft.VisualStudio.Code.PreRelease', '').lower() == 'true'
+    flags = re.split(r'[,\s]+', vsix_manifest.findtext('.//v:GalleryFlags', '', ns))
     if manifest.get('preview'):
-        assert b'Microsoft.VisualStudio.Code.PreRelease' in archive.read('extension.vsixmanifest'), 'Preview must use the Marketplace pre-release channel'
+        assert pre_release and 'Preview' in flags, 'Preview must use the Marketplace pre-release channel and label'
+    else:
+        assert not pre_release and 'Preview' not in flags, 'Stable release must not contain pre-release or Preview flags'
     assert manifest['license'] == 'MIT', 'Project license must be MIT'
     for document in ['PRIVACY.md','SECURITY.md','SUPPORT.md','SETTINGS.md','SUPPORT-MATRIX.md','CONNECTIONS.md','GETTING-STARTED.md']:
         assert archive.read('extension/' + document), 'Missing offline help: ' + document

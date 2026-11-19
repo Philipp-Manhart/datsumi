@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.2 — 2026-11-19
+
+- Publish Datsumi on the regular Marketplace release channel and remove the Preview label.
+- Keep the database features and connection settings from 0.0.1.
+
 ## 0.0.1 — 2026-11-15 (preview)
 
 Initial public preview of Datsumi — Every database. One workspace.

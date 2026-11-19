@@ -1,7 +1,7 @@
 {
   "name": "datsumi",
   "displayName": "Datsumi — Database Explorer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "A modern, unified database client for VS Code. Explore, query, and manage SQL and NoSQL databases without leaving your editor.",
   "categories": [
@@ -30,7 +30,7 @@
     "build": "bun esbuild.mjs",
     "clean": "rm -rf dist",
     "dev": "bun esbuild.mjs --watch",
-    "package": "vsce package --no-dependencies --pre-release",
+    "package": "vsce package --no-dependencies",
     "test:integration": "bun run build && node test/run.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "vscode:prepublish": "bun run build"
@@ -858,7 +858,6 @@
     "workspace"
   ],
   "icon": "resources/datsumi.png",
-  "preview": true,
   "engines": {
     "vscode": "^1.138.0"
   },
