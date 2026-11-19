@@ -23,7 +23,7 @@ On Windows, use `$env:DATSUMI_TEST_HEADLESS="1"` in PowerShell before `bun run r
 
 ## 2. Review the listing and public repository
 
-The Marketplace page is **apps/extension/README.md**; the repository README has matching copy and repository-relative images. It states the actual supported engines, requirements, free MIT licensing, no Pro edition, and privacy behavior. `bun run screenshots` regenerates actual UI screenshots using an isolated synthetic database on Linux/X11; inspect them before committing. Never use production data or credentials.
+The Marketplace page is **apps/extension/README.md**; the repository README has matching copy and repository-relative images. It states the actual supported engines, requirements, free MIT licensing, no Pro edition, and privacy behavior. `bun run screenshots` regenerates actual UI screenshots using an isolated synthetic database on Linux/X11; inspect them before committing. Never use production data or credentials. The package command sets explicit image/content base URLs for `apps/extension` inside the monorepo. Keep these options: vsce otherwise resolves relative images from the repository root. Package verification checks both Markdown screenshots and the HTML logo against the bundled PNG assets.
 
 The extension identity is **philipp-manhart.datsumi**, display name **Datsumi — Database Explorer**. Sign in to [Marketplace publisher management](https://marketplace.visualstudio.com/manage/publishers/) and confirm that you own **philipp-manhart** before publishing. Publisher ownership cannot be inferred from a package.json string or GitHub login. Resolve any name/identity issue before the first upload.
 

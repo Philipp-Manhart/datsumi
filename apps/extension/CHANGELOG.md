@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.3 — 2026-11-19
+
+- Fix the Marketplace logo and screenshots by resolving README images from the extension directory in the monorepo.
+- Check packaged README image links against the bundled assets before publishing.
+
 ## 0.0.2 — 2026-11-19
 
 - Publish Datsumi on the regular Marketplace release channel and remove the Preview label.

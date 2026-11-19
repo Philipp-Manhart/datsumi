@@ -27,6 +27,18 @@ with zipfile.ZipFile(path) as archive:
     assert b'Permission is hereby granted' in archive.read(license_file)
     assert archive.read('extension/' + manifest['icon']).startswith(b'\x89PNG\r\n\x1a\n')
     assert not any(re.search(r'(?:/(?:src|test|node_modules)/|\.(?:pem|key|sqlite|duckdb|map)$|/\.env(?:\.|$))', name) for name in names), 'Unexpected source/private artifact in VSIX'
+    readme = archive.read('extension/readme.md').decode('utf8')
+    image_urls = re.findall(r'!\[[^\]]*\]\(([^)\s]+)\)', readme)
+    image_urls += re.findall(r'''<img\b[^>]*\bsrc=["']([^"']+)["']''', readme, re.I)
+    repository = manifest['repository']
+    repository_path = repository['url'].removeprefix('https://github.com/').removesuffix('.git')
+    image_base = 'https://raw.githubusercontent.com/' + repository_path + '/main/' + repository['directory'].strip('/') + '/'
+    assert len(image_urls) >= 4, 'Missing Marketplace logo or screenshots'
+    for image_url in image_urls:
+        assert image_url.startswith(image_base), 'README image points outside the extension directory: ' + image_url
+        asset = 'extension/' + image_url.removeprefix(image_base)
+        assert asset in names, 'README image does not match a bundled asset: ' + image_url
+        assert archive.read(asset).startswith(b'\x89PNG\r\n\x1a\n'), 'README image must be a valid PNG asset: ' + image_url
     catalog = json.loads(archive.read('extension/dist/driver-catalog.json'))
     for artifact in catalog:
         payload = archive.read('extension/dist/drivers/' + artifact['file'])
